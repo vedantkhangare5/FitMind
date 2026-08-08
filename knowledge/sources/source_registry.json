@@ -1,0 +1,37 @@
+[
+  {
+    "document_id": "doc_who_protein_001",
+    "title": "Protein and Amino Acid Requirements in Human Nutrition",
+    "source_url": "https://apps.who.int/iris/handle/10665/43411",
+    "source_name": "World Health Organization (WHO)",
+    "status": "active"
+  },
+  {
+    "document_id": "doc_acsm_resistance_001",
+    "title": "Progression Models in Resistance Training for Healthy Adults",
+    "source_url": "https://journals.lww.com/acsm-msse/Fulltext/2009/03000/Progression_Models_in_Resistance_Training_for.26.aspx",
+    "source_name": "American College of Sports Medicine (ACSM)",
+    "status": "active"
+  },
+  {
+    "document_id": "doc_nih_sleep_001",
+    "title": "Sleep Deprivation and Deficiency",
+    "source_url": "https://www.nhlbi.nih.gov/health/sleep-deprivation",
+    "source_name": "National Institutes of Health (NIH) NHLBI",
+    "status": "active"
+  },
+  {
+    "document_id": "doc_niddk_weight_001",
+    "title": "Changing Your Habits for Better Health",
+    "source_url": "https://www.niddk.nih.gov/health-information/diet-nutrition/changing-habits-better-health",
+    "source_name": "National Institute of Diabetes and Digestive and Kidney Diseases (NIDDK)",
+    "status": "active"
+  },
+  {
+    "document_id": "doc_cdc_activity_001",
+    "title": "Physical Activity Guidelines for Americans, 2nd edition",
+    "source_url": "https://health.gov/sites/default/files/2019-09/Physical_Activity_Guidelines_2nd_edition.pdf",
+    "source_name": "Centers for Disease Control and Prevention (CDC)",
+    "status": "active"
+  }
+]
