@@ -1,0 +1,22 @@
+{
+  "document_id": "doc_acsm_resistance_002",
+  "title": "ACSM Position Stand: Resistance Training (2026)",
+  "topic": "Resistance Training",
+  "source_name": "American College of Sports Medicine (ACSM)",
+  "source_url": "https://journals.lww.com/acsm",
+  "publication_date": "2026-01-15",
+  "authors": [
+    "Schoenfeld BJ",
+    "Ogborn D",
+    "Krieger JW"
+  ],
+  "source_type": "position_stand",
+  "source_status": "active",
+  "supersedes_document_id": "doc_acsm_resistance_001",
+  "evidence_level": "high",
+  "retrieved_date": "2026-08-08",
+  "section": "Volume and Frequency",
+  "page": null,
+  "text_type": "source_excerpt",
+  "text": "To maximize muscle hypertrophy, training each muscle group 2-3 times per week is superior to 1 time per week. A dose-response relationship exists between weekly training volume and muscle growth, with 10-20 sets per muscle group per week appearing optimal for most individuals.\n\nHypertrophy can be achieved across a wide spectrum of loading ranges (e.g., 30% to 85% of 1RM) provided that sets are taken close to muscular failure. Heavy loads (>80% 1RM) are superior for maximizing maximal strength adaptations compared to lighter loads.\n\nRest intervals of at least 2 minutes between sets of multi-joint exercises promote greater hypertrophy and strength gains compared to shorter rest intervals (e.g., 60 seconds), as they allow for greater volume load to be accumulated."
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "question": "How many minutes of moderate-intensity physical activity should adults do each week?",
+    "expected_document_ids": ["doc_cdc_activity_001"]
+  },
+  {
+    "question": "What is the recommended protein intake for a healthy adult?",
+    "expected_document_ids": ["doc_who_protein_001"]
+  },
+  {
+    "question": "How many hours of sleep are recommended for optimal recovery?",
+    "expected_document_ids": ["doc_nih_sleep_001"]
+  },
+  {
+    "question": "What are the guidelines for resistance training frequency?",
+    "expected_document_ids": ["doc_acsm_resistance_001"]
+  },
+  {
+    "question": "What strategies are effective for long-term weight management?",
+    "expected_document_ids": ["doc_niddk_weight_001"]
+  },
+  {
+    "question": "Does aerobic exercise count towards physical activity goals?",
+    "expected_document_ids": ["doc_cdc_activity_001"]
+  },
+  {
+    "question": "What are the dietary sources of complete proteins?",
+    "expected_document_ids": ["doc_who_protein_001"]
+  },
+  {
+    "question": "How does sleep deprivation affect athletic performance?",
+    "expected_document_ids": ["doc_nih_sleep_001"]
+  },
+  {
+    "question": "How many sets and reps should I do for muscle hypertrophy?",
+    "expected_document_ids": ["doc_acsm_resistance_001"]
+  },
+  {
+    "question": "What is the role of a caloric deficit in losing weight?",
+    "expected_document_ids": ["doc_niddk_weight_001"]
+  }
+]

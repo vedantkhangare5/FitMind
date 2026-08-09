@@ -25,15 +25,45 @@ class EmbeddingService:
         if not texts:
             return []
             
+        embeddings = []
         try:
-            # We pass the batch of texts to the embedding model
+            for text in texts:
+                response = self.client.models.embed_content(
+                    model=self.model,
+                    contents=text
+                )
+                if response.embeddings and response.embeddings[0].values:
+                    embeddings.append(response.embeddings[0].values)
+        except APIError as e:
+            raise RuntimeError(f"Gemini Embedding API failed: {str(e)}")
+        except Exception as e:
+            raise RuntimeError(f"Unexpected embedding error: {str(e)}")
+            
+        if len(embeddings) != len(texts):
+            raise RuntimeError(
+                f"Embedding count mismatch. Expected {len(texts)} embeddings, "
+                f"but generated {len(embeddings)}."
+            )
+            
+        return embeddings
+
+    def embed_query(self, query: str) -> List[float]:
+        """
+        Embeds a single natural-language query.
+        Returns a single vector.
+        """
+        if not query or not query.strip():
+            raise ValueError("Query cannot be empty.")
+            
+        try:
             response = self.client.models.embed_content(
                 model=self.model,
-                contents=texts
+                contents=query.strip()
             )
-            # The response.embeddings is a list of Embedding objects
-            # which have a `values` property containing the float list.
-            return [e.values for e in response.embeddings]
+            if response.embeddings and response.embeddings[0].values:
+                return response.embeddings[0].values
+            else:
+                raise RuntimeError("No embedding returned for query.")
         except APIError as e:
             raise RuntimeError(f"Gemini Embedding API failed: {str(e)}")
         except Exception as e:

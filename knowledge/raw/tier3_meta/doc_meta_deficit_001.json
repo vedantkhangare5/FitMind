@@ -1,0 +1,22 @@
+{
+  "document_id": "doc_meta_deficit_001",
+  "title": "Metabolic Adaptation to Weight Loss",
+  "topic": "Weight Management",
+  "source_name": "Obesity Reviews",
+  "source_url": null,
+  "publication_date": "2015-05-01",
+  "authors": [
+    "Trexler ET",
+    "Smith-Ryan AE",
+    "Norton LE"
+  ],
+  "source_type": "systematic_review",
+  "source_status": "active",
+  "supersedes_document_id": null,
+  "evidence_level": "moderate",
+  "retrieved_date": "2026-08-08",
+  "section": "Metabolic Adaptation",
+  "page": null,
+  "text_type": "source_excerpt",
+  "text": "Prolonged caloric deficits lead to metabolic adaptation (adaptive thermogenesis), where resting metabolic rate drops more than expected from weight loss alone. This is accompanied by changes in hormones like leptin and ghrelin, increasing hunger and decreasing energy expenditure.\n\nDuring a caloric deficit, higher protein intakes (2.3-3.1 g/kg of fat-free mass) and concurrent resistance training are critical to preserve lean body mass. Faster rates of weight loss (e.g., >1% body weight per week) increase the risk of muscle loss compared to slower rates."
+}

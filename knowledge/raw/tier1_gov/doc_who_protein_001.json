@@ -1,0 +1,20 @@
+{
+  "document_id": "doc_who_protein_001",
+  "title": "WHO Guidelines on Protein Intake for Adults",
+  "topic": "Nutrition",
+  "source_name": "World Health Organization (WHO)",
+  "source_url": "https://www.who.int/nutrition/publications/nutrientrequirements/protein/en/",
+  "publication_date": "2007-10-01",
+  "authors": [
+    "WHO Expert Consultation"
+  ],
+  "source_type": "official_guideline",
+  "source_status": "active",
+  "supersedes_document_id": null,
+  "evidence_level": "high",
+  "retrieved_date": "2026-08-08",
+  "section": "General Recommendations",
+  "page": null,
+  "text_type": "source_excerpt",
+  "text": "The safe level of protein intake for healthy adults is 0.83 g/kg body weight per day, derived from nitrogen balance studies. This represents the minimum requirement to prevent deficiency, not necessarily the optimal intake for active individuals.\n\nFor pregnant women, an additional 1, 9, and 31 g/day of protein is recommended in the first, second, and third trimesters, respectively. Older adults may benefit from intakes closer to 1.0-1.2 g/kg/day to mitigate sarcopenia."
+}

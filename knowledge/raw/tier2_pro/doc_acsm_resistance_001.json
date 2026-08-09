@@ -1,0 +1,21 @@
+{
+  "document_id": "doc_acsm_resistance_001",
+  "title": "ACSM Position Stand: Resistance Training (2009)",
+  "topic": "Resistance Training",
+  "source_name": "American College of Sports Medicine (ACSM)",
+  "source_url": "https://journals.lww.com/acsm",
+  "publication_date": "2009-03-01",
+  "authors": [
+    "Kraemer WJ",
+    "Ratamess NA"
+  ],
+  "source_type": "position_stand",
+  "source_status": "superseded",
+  "supersedes_document_id": null,
+  "evidence_level": "high",
+  "retrieved_date": "2026-08-08",
+  "section": "Hypertrophy",
+  "page": null,
+  "text_type": "source_excerpt",
+  "text": "For hypertrophy, it is recommended to train 2-3 days per week using 1-3 sets of 8-12 repetitions per exercise. Rest periods should be 1-2 minutes between sets."
+}

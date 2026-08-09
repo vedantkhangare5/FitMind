@@ -39,8 +39,8 @@ class VectorStore:
             documents.append(chunk.text)
             
             # ChromaDB metadatas cannot contain None or complex types
-            # so we ensure they are all strings or ints.
-            metadatas.append({
+            # so we ensure they are all strings or ints, and remove None values.
+            raw_meta = {
                 "document_id": chunk.document_id,
                 "source_name": chunk.source_name,
                 "title": chunk.title,
@@ -51,13 +51,28 @@ class VectorStore:
                 "source_status": chunk.source_status,
                 "text_type": chunk.text_type,
                 "chunk_index": chunk.chunk_index
-            })
+            }
+            # Remove keys where value is None
+            safe_meta = {k: v for k, v in raw_meta.items() if v is not None}
+            metadatas.append(safe_meta)
 
         self.collection.upsert(
             ids=ids,
             documents=documents,
             embeddings=embeddings,
             metadatas=metadatas
+        )
+
+    def search(self, query_embedding: List[float], top_k: int = 5, where: dict = None) -> dict:
+        """
+        Searches ChromaDB for the most similar chunks.
+        Returns the raw ChromaDB results dictionary.
+        """
+        return self.collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k,
+            where=where,
+            include=["documents", "metadatas", "distances"]
         )
 
     def count(self) -> int:

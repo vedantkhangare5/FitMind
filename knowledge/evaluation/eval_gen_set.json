@@ -1,0 +1,26 @@
+[
+  {
+    "question": "What is the recommended protein intake for a healthy adult?",
+    "type": "supported"
+  },
+  {
+    "question": "How many hours of sleep are recommended for optimal recovery?",
+    "type": "supported"
+  },
+  {
+    "question": "What is the recommended dosage for creatine monohydrate?",
+    "type": "unsupported"
+  },
+  {
+    "question": "What strategies are effective for long-term weight management?",
+    "type": "supported"
+  },
+  {
+    "question": "How can I combine resistance training and protein intake to optimize muscle growth?",
+    "type": "supported"
+  },
+  {
+    "question": "What are the side effects of anabolic steroids?",
+    "type": "unsupported"
+  }
+]

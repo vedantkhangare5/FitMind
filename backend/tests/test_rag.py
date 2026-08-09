@@ -50,12 +50,9 @@ def test_chunk_document_preserves_metadata(sample_document):
 
 @patch.dict(os.environ, {"GEMINI_API_KEY": "fake_key"})
 @patch("app.rag.embeddings.genai.Client")
-def test_embedding_service_mocked(mock_client_class):
-    # Mock the genai client response
+def test_embedding_service_1_input(mock_client_class):
     mock_client = MagicMock()
     mock_response = MagicMock()
-    
-    # Fake embedding
     fake_emb = MagicMock()
     fake_emb.values = [0.1, 0.2, 0.3]
     mock_response.embeddings = [fake_emb]
@@ -64,12 +61,88 @@ def test_embedding_service_mocked(mock_client_class):
     mock_client_class.return_value = mock_client
     
     service = EmbeddingService()
-    embeddings = service.embed_documents(["test text"])
+    embeddings = service.embed_documents(["chunk 1"])
     
     assert len(embeddings) == 1
     assert embeddings[0] == [0.1, 0.2, 0.3]
-    mock_client.models.embed_content.assert_called_once()
+    mock_client.models.embed_content.assert_called_once_with(model="gemini-embedding-2", contents="chunk 1")
 
+@patch.dict(os.environ, {"GEMINI_API_KEY": "fake_key"})
+@patch("app.rag.embeddings.genai.Client")
+def test_embedding_service_5_inputs_and_order(mock_client_class):
+    mock_client = MagicMock()
+    
+    def side_effect(model, contents):
+        resp = MagicMock()
+        emb = MagicMock()
+        emb.values = [float(len(contents))]
+        resp.embeddings = [emb]
+        return resp
+        
+    mock_client.models.embed_content.side_effect = side_effect
+    mock_client_class.return_value = mock_client
+    
+    service = EmbeddingService()
+    inputs = ["a", "bb", "ccc", "dddd", "eeeee"]
+    embeddings = service.embed_documents(inputs)
+    
+    assert len(embeddings) == 5
+    assert embeddings == [[1.0], [2.0], [3.0], [4.0], [5.0]]
+    assert mock_client.models.embed_content.call_count == 5
+
+@patch.dict(os.environ, {"GEMINI_API_KEY": "fake_key"})
+@patch("app.rag.embeddings.genai.Client")
+def test_embedding_service_api_failure(mock_client_class):
+    mock_client = MagicMock()
+    mock_client.models.embed_content.side_effect = Exception("Network failure")
+    mock_client_class.return_value = mock_client
+    
+    service = EmbeddingService()
+    with pytest.raises(RuntimeError) as exc_info:
+        service.embed_documents(["test"])
+    assert "Unexpected embedding error: Network failure" in str(exc_info.value)
+
+@patch.dict(os.environ, {"GEMINI_API_KEY": "fake_key"})
+@patch("app.rag.embeddings.genai.Client")
+def test_embedding_service_mismatch_rejected(mock_client_class):
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.embeddings = []
+    
+    mock_client.models.embed_content.return_value = mock_response
+    mock_client_class.return_value = mock_client
+    
+    service = EmbeddingService()
+    with pytest.raises(RuntimeError) as exc_info:
+        service.embed_documents(["test"])
+    assert "Embedding count mismatch" in str(exc_info.value)
+
+@patch.dict(os.environ, {"GEMINI_API_KEY": "fake_key"})
+@patch("app.rag.embeddings.genai.Client")
+def test_embedding_service_embed_query(mock_client_class):
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    fake_emb = MagicMock()
+    fake_emb.values = [0.9, 0.8, 0.7]
+    mock_response.embeddings = [fake_emb]
+    
+    mock_client.models.embed_content.return_value = mock_response
+    mock_client_class.return_value = mock_client
+    
+    service = EmbeddingService()
+    embedding = service.embed_query("search query")
+    
+    assert embedding == [0.9, 0.8, 0.7]
+    mock_client.models.embed_content.assert_called_once_with(model="gemini-embedding-2", contents="search query")
+
+@patch.dict(os.environ, {"GEMINI_API_KEY": "fake_key"})
+def test_embedding_service_embed_query_empty():
+    service = EmbeddingService()
+    with pytest.raises(ValueError):
+        service.embed_query("")
+    with pytest.raises(ValueError):
+        service.embed_query("   ")
+        
 def test_vectorstore_idempotency(sample_document, tmp_path):
     # Use a temporary directory for ChromaDB so tests don't pollute local storage
     store = VectorStore(persist_directory=str(tmp_path), collection_name="test_col")
