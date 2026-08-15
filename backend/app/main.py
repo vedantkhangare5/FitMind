@@ -27,7 +27,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import fitness, rag
+from app.routers import fitness, rag, agent
 
 # Create the FastAPI application
 # The title and version appear in the auto-generated docs at /docs
@@ -73,6 +73,6 @@ def health_check():
     }
 
 # Include routers
-from app.routers import fitness, rag
 app.include_router(fitness.router)
 app.include_router(rag.router)
+app.include_router(agent.router, prefix="/api")
