@@ -129,7 +129,12 @@ class AgentOrchestrator:
                         logger.warning(f"Tool retry limit exceeded for {name}.")
                         return self._error_response(error_code="TOOL_RETRY_LIMIT_EXCEEDED", generation_error=True)
                         
-                    tool_call_records.append(ToolCallRecord(tool_name=name, status=status))
+                    # Create safe result for frontend (hide huge chunks from search_knowledge)
+                    safe_result = result_envelope.copy()
+                    if name == "search_knowledge" and safe_result.get("success"):
+                        safe_result["data"] = {"message": "Knowledge retrieved successfully"}
+                        
+                    tool_call_records.append(ToolCallRecord(tool_name=name, status=status, result=safe_result))
                     
                     # Package the response to send back to the model
                     function_responses.append(

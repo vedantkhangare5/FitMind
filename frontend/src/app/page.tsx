@@ -1,84 +1,56 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Activity, MessageSquare, ArrowRight } from "lucide-react";
 
-export default function Home() {
-  const [healthStatus, setHealthStatus] = useState<Record<string, unknown> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function checkHealth() {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const response = await fetch(`${apiUrl}/api/health`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        setHealthStatus(data);
-      } catch (e: unknown) {
-        if (e instanceof Error) {
-          setError(e.message);
-        } else {
-          setError("Failed to connect to backend");
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    checkHealth();
-  }, []);
-
+export default function DashboardPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
-        <h1 className="text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-emerald-500 to-teal-500">
-          FitMind AI Foundation
-        </h1>
-        
-        <div className="bg-white dark:bg-zinc-900 p-8 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-800 w-full max-w-md mx-auto">
-          <h2 className="text-xl font-semibold mb-6 border-b border-zinc-200 dark:border-zinc-800 pb-2">
-            Backend Connection Status
-          </h2>
-          
-          {loading ? (
-            <div className="flex items-center space-x-3 text-zinc-500">
-              <div className="animate-spin h-5 w-5 border-2 border-emerald-500 border-t-transparent rounded-full"></div>
-              <span>Connecting to FastAPI...</span>
-            </div>
-          ) : error ? (
-            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-lg border border-red-200 dark:border-red-800">
-              <p className="font-bold mb-1">Connection Failed</p>
-              <p className="text-sm">{error}</p>
-              <p className="text-xs mt-3 pt-3 border-t border-red-200 dark:border-red-800 opacity-80">
-                Is the backend running on localhost:8000?
+    <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">
+      <div className="max-w-5xl mx-auto px-6 py-12 md:py-20">
+        <header className="text-center mb-16">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-bold text-2xl tracking-tighter shadow-lg mx-auto mb-6">
+            FM
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-balance">
+            Your Intelligence Layer for Fitness
+          </h1>
+          <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto">
+            Experience the future of fitness planning. Deterministic math engine combined with grounded knowledge retrieval.
+          </p>
+        </header>
+
+        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          {/* Assistant Card */}
+          <Link href="/assistant" className="group">
+            <div className="h-full p-8 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-emerald-500/30 transition-all">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <MessageSquare className="w-6 h-6" />
+              </div>
+              <h2 className="text-2xl font-semibold mb-3 flex items-center gap-2">
+                FitMind Assistant
+                <ArrowRight className="w-5 h-5 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all text-emerald-600" />
+              </h2>
+              <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Chat with your personalized AI fitness agent. It can calculate your macros, verify nutrition safety, and answer questions using verified scientific sources.
               </p>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800/30">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                <span className="font-medium">Connected successfully!</span>
-              </div>
-              
-              <div className="bg-zinc-100 dark:bg-zinc-800/50 p-4 rounded-lg font-mono text-xs overflow-auto">
-                <pre>{JSON.stringify(healthStatus, null, 2)}</pre>
-              </div>
-            </div>
-          )}
+          </Link>
 
-          <div className="mt-8 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-            <a 
-              href="/calculator" 
-              className="block w-full text-center bg-zinc-900 dark:bg-zinc-100 text-zinc-50 dark:text-zinc-900 font-medium py-2 rounded-lg hover:opacity-90 transition-opacity"
-            >
-              Test Fitness Engine &rarr;
-            </a>
-          </div>
+          {/* Calculator Card */}
+          <Link href="/calculator" className="group">
+            <div className="h-full p-8 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-blue-500/30 transition-all">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Activity className="w-6 h-6" />
+              </div>
+              <h2 className="text-2xl font-semibold mb-3 flex items-center gap-2">
+                Manual Calculator
+                <ArrowRight className="w-5 h-5 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all text-blue-600" />
+              </h2>
+              <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Direct access to the deterministic math engine. Calculate your BMR, TDEE, and optimal protein targets instantly without AI processing.
+              </p>
+            </div>
+          </Link>
         </div>
       </div>
     </main>

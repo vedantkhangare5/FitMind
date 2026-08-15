@@ -219,3 +219,61 @@ def test_api_error(orchestrator, mocker):
     
     assert resp.generation_error is True
     assert resp.error_code == "MODEL_RATE_LIMIT"
+
+def test_tool_call_result_exposed_safely(orchestrator, mocker):
+    mock_generate = orchestrator.client.models.generate_content
+    # Call with a deterministic calculation tool
+    call1 = MockGenerateContentResponse(
+        function_calls=[
+            MockFunctionCall(name="calculate_tdee", args={"weight_kg": 70, "height_cm": 175, "age": 30, "sex": "male", "activity_level": "sedentary"}),
+            MockFunctionCall(name="calculate_protein_target", args={"weight_kg": 70, "goal": "build_muscle"})
+        ]
+    )
+    call2 = MockGenerateContentResponse(
+        text='{"answer": "Results here", "citations": [], "grounded": false, "insufficient_context": false}'
+    )
+    mock_generate.side_effect = [call1, call2]
+    
+    resp = orchestrator.ask(AgentRequest(query="Calculate my TDEE and protein"))
+    
+    assert len(resp.tool_calls) == 2
+    tdee_call = resp.tool_calls[0]
+    protein_call = resp.tool_calls[1]
+    
+    # Verify arguments are NOT exposed in ToolCallRecord schema
+    assert not hasattr(tdee_call, "arguments")
+    
+    # Verify exact backend calculation is exposed in result
+    assert tdee_call.status == "success"
+    assert tdee_call.result["success"] is True
+    assert "tdee" in tdee_call.result["data"]
+    
+    assert protein_call.status == "success"
+    assert protein_call.result["success"] is True
+    assert "protein_target_min" in protein_call.result["data"]
+    
+def test_tool_call_error_exposed_without_args(orchestrator, mocker):
+    mock_generate = orchestrator.client.models.generate_content
+    # Call with a malformed argument to trigger tool failure
+    call1 = MockGenerateContentResponse(
+        function_calls=[
+            MockFunctionCall(name="calculate_tdee", args={"weight_kg": -10, "height_cm": 175, "age": 30, "sex": "male", "activity_level": "sedentary"})
+        ]
+    )
+    call2 = MockGenerateContentResponse(
+        text='{"answer": "Results here", "citations": [], "grounded": false, "insufficient_context": false}'
+    )
+    mock_generate.side_effect = [call1, call2]
+    
+    resp = orchestrator.ask(AgentRequest(query="Calculate my TDEE"))
+    
+    assert len(resp.tool_calls) == 1
+    tdee_call = resp.tool_calls[0]
+    
+    # Verify arguments are NOT exposed
+    assert not hasattr(tdee_call, "arguments")
+    
+    # Verify structured error is exposed
+    assert tdee_call.status == "error"
+    assert tdee_call.result["success"] is False
+    assert "weight_kg" in str(tdee_call.result["error"]).lower() or "error" in str(tdee_call.result["error"]).lower()

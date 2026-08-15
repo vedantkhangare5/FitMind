@@ -8,6 +8,7 @@ class AgentRequest(BaseModel):
 class ToolCallRecord(BaseModel):
     tool_name: str
     status: str = Field(..., description="'success' or 'error'")
+    result: Optional[dict] = None
     duration_ms: Optional[int] = None
 
 class AgentLLMResponse(BaseModel):
