@@ -2,6 +2,7 @@ import os
 from typing import List, Dict
 from google import genai
 from google.genai.errors import APIError
+from app.config import settings
 from app.schemas.knowledge import RetrievalResult
 from app.schemas.rag import GenerateResponse, Citation, LLMResponseSchema
 
@@ -21,7 +22,7 @@ INSUFFICIENT_CONTEXT_MESSAGE = "I couldn't find sufficient information about thi
 
 class GenerationService:
     def __init__(self, model_name: str = "gemini-3.5-flash"):
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = settings.GEMINI_API_KEY
         if not api_key or api_key == "not-set-yet":
             raise ValueError("GEMINI_API_KEY is not configured properly.")
         self.client = genai.Client(api_key=api_key)

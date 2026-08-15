@@ -32,9 +32,10 @@ class Settings(BaseSettings):
     # Gemini API key — not needed until Phase 3, so it has a default
     GEMINI_API_KEY: str = "not-set-yet"
 
-    # Tell pydantic-settings to read from the .env file in the backend/ folder
+    # Tell pydantic-settings to read from .env and .env.local (local overrides)
+    # Files listed later take higher priority, so .env.local overrides .env
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", ".env.local"),
         env_file_encoding="utf-8",
         extra="ignore",  # Ignore any extra variables in .env we don't use
     )

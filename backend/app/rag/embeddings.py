@@ -2,6 +2,7 @@ import os
 from typing import List
 from google import genai
 from google.genai.errors import APIError
+from app.config import settings
 
 class EmbeddingService:
     """
@@ -9,10 +10,10 @@ class EmbeddingService:
     Currently uses Google Gemini 'gemini-embedding-2' via google-genai SDK.
     """
     def __init__(self):
-        # We enforce API key loading from env vars to avoid hardcoding secrets.
-        self.api_key = os.environ.get("GEMINI_API_KEY")
-        if not self.api_key:
-            raise ValueError("GEMINI_API_KEY environment variable is missing.")
+        # We enforce API key loading from settings to avoid hardcoding secrets.
+        self.api_key = settings.GEMINI_API_KEY
+        if not self.api_key or self.api_key == "not-set-yet":
+            raise ValueError("GEMINI_API_KEY is not configured properly.")
             
         self.client = genai.Client(api_key=self.api_key)
         self.model = "gemini-embedding-2"
