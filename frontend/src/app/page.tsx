@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Activity, MessageSquare, ArrowRight, User } from "lucide-react";
+import { Activity, MessageSquare, ArrowRight, User, TrendingUp } from "lucide-react";
 
 interface ProfileData {
   age: number;
@@ -161,22 +161,21 @@ export default function DashboardPage() {
             </div>
           </Link>
 
-          {/* Assistant + Calculator — 2-Column Grid */}
-          <div className="grid md:grid-cols-2 gap-6">
+          {/* Features Grid — 3-Column */}
+          <div className="grid md:grid-cols-3 gap-6">
             {/* Assistant Card */}
             <Link href="/assistant" className="group">
               <div className="h-full p-8 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-emerald-500/30 transition-all">
                 <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   <MessageSquare className="w-6 h-6" />
                 </div>
-                <h2 className="text-2xl font-semibold mb-3 flex items-center gap-2">
+                <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
                   FitMind Assistant
                   <ArrowRight className="w-5 h-5 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all text-emerald-600" />
                 </h2>
-                <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                  Chat with your personalized AI fitness agent. It can calculate
-                  your macros, verify nutrition safety, and answer questions
-                  using verified scientific sources.
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
+                  Chat with your personalized AI fitness agent. Calculate
+                  macros, verify nutrition safety, and answer questions.
                 </p>
               </div>
             </Link>
@@ -187,14 +186,30 @@ export default function DashboardPage() {
                 <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   <Activity className="w-6 h-6" />
                 </div>
-                <h2 className="text-2xl font-semibold mb-3 flex items-center gap-2">
+                <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
                   Manual Calculator
                   <ArrowRight className="w-5 h-5 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all text-blue-600" />
                 </h2>
-                <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                  Direct access to the deterministic math engine. Calculate your
-                  BMR, TDEE, and optimal protein targets instantly without AI
-                  processing.
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
+                  Direct access to the deterministic math engine for BMR, TDEE,
+                  and optimal protein targets instantly.
+                </p>
+              </div>
+            </Link>
+
+            {/* Progress Card */}
+            <Link href="/progress" className="group">
+              <div className="h-full p-8 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-amber-500/30 transition-all">
+                <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <TrendingUp className="w-6 h-6" />
+                </div>
+                <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                  Progress History
+                  <ArrowRight className="w-5 h-5 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all text-amber-600" />
+                </h2>
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
+                  Track your weight changes over time with deterministic trends
+                  and a visual graph separated from your profile.
                 </p>
               </div>
             </Link>

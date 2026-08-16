@@ -40,6 +40,9 @@ class SearchKnowledgeInput(BaseModel):
     top_k: int = Field(5, ge=1, le=50)
 
 
+class GetProgressSummaryInput(BaseModel):
+    pass
+
 # ==============================================================================
 # GEMINI FUNCTION DECLARATIONS
 # ==============================================================================
@@ -128,5 +131,15 @@ search_knowledge_declaration = FunctionDeclaration(
             "top_k": Schema(type=Type.INTEGER, description="Number of results to retrieve (default 5)"),
         },
         required=["query"]
+    )
+)
+
+get_progress_summary_declaration = FunctionDeclaration(
+    name="get_progress_summary",
+    description="Retrieves the user's historical progress summary (current weight, starting weight, total change, percentage change, and trend). Use this when the user asks about their past progress or weight trend. Do not calculate trends yourself; use this tool.",
+    parameters=Schema(
+        type=Type.OBJECT,
+        properties={},
+        required=[]
     )
 )

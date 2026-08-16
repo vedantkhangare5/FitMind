@@ -35,10 +35,20 @@ CREATE TABLE IF NOT EXISTS fitness_profile (
 );
 """
 
+CREATE_PROGRESS_TABLE = """
+CREATE TABLE IF NOT EXISTS progress_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    weight_kg REAL NOT NULL,
+    recorded_at TEXT NOT NULL
+);
+"""
+
+
+import os
 
 def get_connection(db_path: Optional[str] = None) -> sqlite3.Connection:
     """Creates a new SQLite connection. Row factory set for dict-like access."""
-    path = db_path or str(DEFAULT_DB_PATH)
+    path = db_path or os.environ.get("FITMIND_DB_PATH") or str(DEFAULT_DB_PATH)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
@@ -50,6 +60,7 @@ def init_db(db_path: Optional[str] = None) -> None:
     conn = get_connection(db_path)
     try:
         conn.execute(CREATE_PROFILE_TABLE)
+        conn.execute(CREATE_PROGRESS_TABLE)
         conn.commit()
         logger.info("Database initialized successfully.")
     finally:
@@ -129,3 +140,127 @@ class ProfileRepository:
             return deleted
         finally:
             conn.close()
+
+class ProgressRepository:
+    """
+    Data access layer for the progress history.
+    """
+    def __init__(self, db_path: Optional[str] = None):
+        self._db_path = db_path
+
+    def _conn(self) -> sqlite3.Connection:
+        return get_connection(self._db_path)
+
+    def add_entry(self, weight_kg: float, recorded_at: str) -> dict:
+        conn = self._conn()
+        try:
+            cursor = conn.execute(
+                "INSERT INTO progress_history (weight_kg, recorded_at) VALUES (?, ?)",
+                (weight_kg, recorded_at)
+            )
+            conn.commit()
+            return {
+                "id": cursor.lastrowid,
+                "weight_kg": weight_kg,
+                "recorded_at": recorded_at
+            }
+        finally:
+            conn.close()
+
+    def get_history(self) -> list[dict]:
+        """Returns all entries sorted by recorded_at ASC, id ASC."""
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                "SELECT id, weight_kg, recorded_at FROM progress_history "
+                "ORDER BY recorded_at ASC, id ASC"
+            ).fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            conn.close()
+
+    def delete_entry(self, entry_id: int) -> bool:
+        conn = self._conn()
+        try:
+            cursor = conn.execute("DELETE FROM progress_history WHERE id = ?", (entry_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            conn.close()
+
+    def get_summary(self, goal: Optional[str] = None) -> dict:
+        """
+        Calculates deterministic summary metrics based on the history.
+        Trend is calculated as a linear regression slope in kg/week.
+        """
+        history = self.get_history()
+        
+        if not history:
+            return {
+                "current_weight": None,
+                "starting_weight": None,
+                "total_change_kg": None,
+                "percentage_change": None,
+                "trend": "insufficient_data",
+                "entries_count": 0,
+                "note": "No progress history found."
+            }
+
+        starting_weight = history[0]["weight_kg"]
+        current_weight = history[-1]["weight_kg"]
+        total_change_kg = current_weight - starting_weight
+        percentage_change = (total_change_kg / starting_weight) * 100 if starting_weight > 0 else 0.0
+
+        trend = "insufficient_data"
+        if len(history) >= 3:
+            # Linear regression of weight_kg over time (weeks)
+            # x = elapsed time in weeks from the earliest entry
+            # y = weight_kg
+            try:
+                t0 = datetime.fromisoformat(history[0]["recorded_at"].replace("Z", "+00:00")).timestamp()
+                
+                sum_x = 0.0
+                sum_y = 0.0
+                sum_xy = 0.0
+                sum_x2 = 0.0
+                n = len(history)
+                
+                for entry in history:
+                    t = datetime.fromisoformat(entry["recorded_at"].replace("Z", "+00:00")).timestamp()
+                    # Convert elapsed seconds to weeks
+                    x = (t - t0) / (86400 * 7)
+                    y = entry["weight_kg"]
+                    
+                    sum_x += x
+                    sum_y += y
+                    sum_xy += x * y
+                    sum_x2 += x * x
+                
+                denominator = (n * sum_x2) - (sum_x * sum_x)
+                if denominator == 0:
+                    trend = "stable"
+                else:
+                    slope = ((n * sum_xy) - (sum_x * sum_y)) / denominator
+                    if slope < -0.1:
+                        trend = "losing"
+                    elif slope > 0.1:
+                        trend = "gaining"
+                    else:
+                        trend = "stable"
+            except Exception as e:
+                logger.error(f"Error calculating trend: {e}")
+                trend = "stable"
+
+        note = None
+        if goal == "build_muscle":
+            note = "Weight history alone is insufficient to track muscle gain, as it cannot distinguish between fat, muscle, and water weight."
+
+        return {
+            "current_weight": round(current_weight, 2),
+            "starting_weight": round(starting_weight, 2),
+            "total_change_kg": round(total_change_kg, 2),
+            "percentage_change": round(percentage_change, 2),
+            "trend": trend,
+            "entries_count": len(history),
+            "note": note
+        }

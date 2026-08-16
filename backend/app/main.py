@@ -30,7 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import init_db
-from app.routers import fitness, rag, agent, profile
+from app.routers import fitness, rag, agent, profile, progress
 
 logger = logging.getLogger(__name__)
 
@@ -95,3 +95,4 @@ app.include_router(fitness.router)
 app.include_router(rag.router)
 app.include_router(agent.router, prefix="/api")
 app.include_router(profile.router)
+app.include_router(progress.router)

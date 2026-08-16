@@ -1,6 +1,7 @@
 from app.tools.registry import ToolRegistry
 from app.tools import fitness
 from app.tools import rag
+from app.tools import progress
 from app.tools import schemas
 
 # Global Tool Registry Instance
@@ -40,6 +41,13 @@ registry.register(
     input_schema=schemas.SearchKnowledgeInput
 )
 
+# Register Progress Tools
+registry.register(
+    name="get_progress_summary",
+    func=progress.execute_get_progress_summary,
+    input_schema=schemas.GetProgressSummaryInput
+)
+
 # Export Function Declarations for Gemini
 tool_declarations = [
     schemas.calculate_bmi_declaration,
@@ -47,7 +55,8 @@ tool_declarations = [
     schemas.calculate_tdee_declaration,
     schemas.calculate_protein_target_declaration,
     schemas.validate_calorie_target_declaration,
-    schemas.search_knowledge_declaration
+    schemas.search_knowledge_declaration,
+    schemas.get_progress_summary_declaration
 ]
 
 __all__ = ["registry", "tool_declarations"]
