@@ -21,13 +21,30 @@ WHY THIS FILE EXISTS:
 - If removed, there is no backend — uvicorn has nothing to run
 """
 
+import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import fitness, rag, agent
+from app.database import init_db
+from app.routers import fitness, rag, agent, profile
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan: initialize resources on startup, clean up on shutdown."""
+    # Startup: create SQLite tables
+    init_db()
+    logger.info("Application startup complete.")
+    yield
+    # Shutdown: nothing to clean up for now
+    logger.info("Application shutdown complete.")
+
 
 # Create the FastAPI application
 # The title and version appear in the auto-generated docs at /docs
@@ -35,6 +52,7 @@ app = FastAPI(
     title=settings.APP_NAME,
     version="0.1.0",
     description="Evidence-based fitness and nutrition intelligence agent for Indian users",
+    lifespan=lifespan,
 )
 
 # Configure CORS — allow the frontend to call this backend
@@ -76,3 +94,4 @@ def health_check():
 app.include_router(fitness.router)
 app.include_router(rag.router)
 app.include_router(agent.router, prefix="/api")
+app.include_router(profile.router)

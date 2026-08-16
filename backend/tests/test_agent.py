@@ -25,12 +25,17 @@ class MockGenerateContentResponse:
         self.candidates = [MockCandidate()]
 
 @pytest.fixture
-def orchestrator(mocker):
+def orchestrator(mocker, tmp_path):
     mocker.patch("os.getenv", return_value="dummy_key")
     # Mock genai.Client
     mock_client = MagicMock()
     mocker.patch("app.agent.orchestrator.genai.Client", return_value=mock_client)
-    agent = AgentOrchestrator()
+    # Provide an initialized in-memory profile DB so orchestrator.ask() works
+    from app.database import ProfileRepository, init_db
+    db_path = str(tmp_path / "test.db")
+    init_db(db_path=db_path)
+    repo = ProfileRepository(db_path=db_path)
+    agent = AgentOrchestrator(profile_repo=repo)
     return agent
 
 def test_no_tool_response(orchestrator, mocker):

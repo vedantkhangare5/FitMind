@@ -2,6 +2,7 @@ import ReactMarkdown from "react-markdown";
 import { Citation, CitationsList } from "./CitationsList";
 import { ToolCallRecord, ToolActivity } from "./ToolActivity";
 import { CalculationCard } from "./CalculationCard";
+import { ProfileBadge } from "./ProfileBadge";
 import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ export interface Message {
   isError?: boolean;
   errorCode?: string;
   isLoading?: boolean;
+  profileUsed?: boolean;
 }
 
 interface ChatMessageProps {
@@ -42,6 +44,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
           : "bg-white border-zinc-200 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-100"
       )}>
         
+        {/* Profile Badge */}
+        {message.profileUsed && <ProfileBadge profileUsed={true} />}
+
         {/* Safe Tool Activity Badges */}
         {message.tool_calls && message.tool_calls.length > 0 && (
           <ToolActivity toolCalls={message.tool_calls} />

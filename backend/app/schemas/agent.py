@@ -26,3 +26,4 @@ class AgentResponse(BaseModel):
     insufficient_context: bool
     generation_error: bool = Field(False, description="True if an API, loop limit, or infrastructure error occurred")
     error_code: Optional[str] = Field(None, description="Machine-readable error code if generation_error is true or validation failed")
+    profile_used: bool = Field(False, description="True if a saved fitness profile was used for context")

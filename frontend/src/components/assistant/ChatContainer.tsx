@@ -65,6 +65,7 @@ export function ChatContainer() {
           tool_calls: data.tool_calls,
           isError: data.generation_error,
           errorCode: data.error_code,
+          profileUsed: data.profile_used,
         }
       ]);
     } catch (err: unknown) {
