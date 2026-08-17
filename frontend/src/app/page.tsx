@@ -172,8 +172,8 @@ export default function DashboardPage() {
 
           <CoachingCard />
 
-          {/* Features Grid — 3-Column */}
-          <div className="grid md:grid-cols-3 gap-6">
+          {/* Features Grid */}
+          <div className="grid md:grid-cols-2 gap-6">
             {/* Assistant Card */}
             <Link href="/assistant" className="group">
               <div className="h-full p-8 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-emerald-500/30 transition-all">
@@ -204,6 +204,22 @@ export default function DashboardPage() {
                 <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
                   Direct access to the deterministic math engine for BMR, TDEE,
                   and optimal protein targets instantly.
+                </p>
+              </div>
+            </Link>
+
+            {/* Behavior Card */}
+            <Link href="/behavior" className="group">
+              <div className="h-full p-8 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-pink-500/30 transition-all">
+                <div className="w-12 h-12 rounded-xl bg-pink-50 dark:bg-pink-950/50 text-pink-600 dark:text-pink-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Activity className="w-6 h-6" />
+                </div>
+                <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                  Behavior Tracking
+                  <ArrowRight className="w-5 h-5 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all text-pink-600" />
+                </h2>
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
+                  Log your daily nutrition and workouts to track adherence and consistency over time.
                 </p>
               </div>
             </Link>

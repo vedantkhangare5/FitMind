@@ -51,6 +51,7 @@ class CoachResponse(BaseModel):
     recommendations: List[CoachingRecommendation]
     metrics: dict = Field(default_factory=dict, description="Deterministic metrics pre-calculated for the user")
     progress: dict = Field(default_factory=dict, description="Deterministic progress summary")
+    behavior: dict = Field(default_factory=dict, description="Deterministic behavioral summary")
     citations: List[Citation]
     tool_calls: List[ToolCallRecord]
     generation_error: bool = Field(False)

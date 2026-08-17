@@ -43,6 +43,25 @@ CREATE TABLE IF NOT EXISTS progress_history (
 );
 """
 
+CREATE_NUTRITION_TABLE = """
+CREATE TABLE IF NOT EXISTS nutrition_logs (
+    date TEXT PRIMARY KEY,
+    calories INTEGER NOT NULL,
+    protein_grams INTEGER NOT NULL
+);
+"""
+
+CREATE_WORKOUT_TABLE = """
+CREATE TABLE IF NOT EXISTS workout_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    workout_type TEXT NOT NULL,
+    duration_minutes INTEGER NOT NULL,
+    completed BOOLEAN NOT NULL
+);
+"""
+
+
 
 import os
 
@@ -61,6 +80,8 @@ def init_db(db_path: Optional[str] = None) -> None:
     try:
         conn.execute(CREATE_PROFILE_TABLE)
         conn.execute(CREATE_PROGRESS_TABLE)
+        conn.execute(CREATE_NUTRITION_TABLE)
+        conn.execute(CREATE_WORKOUT_TABLE)
         conn.commit()
         logger.info("Database initialized successfully.")
     finally:
@@ -264,3 +285,147 @@ class ProgressRepository:
             "entries_count": len(history),
             "note": note
         }
+
+class BehaviorRepository:
+    def __init__(self, db_path: Optional[str] = None):
+        self._db_path = db_path
+
+    def _conn(self) -> sqlite3.Connection:
+        return get_connection(self._db_path)
+
+    def log_nutrition(self, date: str, calories: int, protein_grams: int) -> dict:
+        conn = self._conn()
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO nutrition_logs (date, calories, protein_grams) VALUES (?, ?, ?)",
+                (date, calories, protein_grams)
+            )
+            conn.commit()
+            return {"date": date, "calories": calories, "protein_grams": protein_grams}
+        finally:
+            conn.close()
+
+    def get_nutrition_logs(self, limit: int = 30) -> list[dict]:
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                "SELECT date, calories, protein_grams FROM nutrition_logs "
+                "ORDER BY date DESC LIMIT ?", (limit,)
+            ).fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            conn.close()
+
+    def delete_nutrition_log(self, date: str) -> bool:
+        conn = self._conn()
+        try:
+            cursor = conn.execute("DELETE FROM nutrition_logs WHERE date = ?", (date,))
+            conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            conn.close()
+
+    def log_workout(self, date: str, workout_type: str, duration_minutes: int, completed: bool) -> dict:
+        conn = self._conn()
+        try:
+            cursor = conn.execute(
+                "INSERT INTO workout_logs (date, workout_type, duration_minutes, completed) VALUES (?, ?, ?, ?)",
+                (date, workout_type, duration_minutes, completed)
+            )
+            conn.commit()
+            return {
+                "id": cursor.lastrowid,
+                "date": date,
+                "workout_type": workout_type,
+                "duration_minutes": duration_minutes,
+                "completed": completed
+            }
+        finally:
+            conn.close()
+
+    def get_workout_logs(self, limit: int = 30) -> list[dict]:
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                "SELECT id, date, workout_type, duration_minutes, completed FROM workout_logs "
+                "ORDER BY date DESC, id DESC LIMIT ?", (limit,)
+            ).fetchall()
+            result = []
+            for row in rows:
+                r = dict(row)
+                r["completed"] = bool(r["completed"])
+                result.append(r)
+            return result
+        finally:
+            conn.close()
+
+    def delete_workout_log(self, log_id: int) -> bool:
+        conn = self._conn()
+        try:
+            cursor = conn.execute("DELETE FROM workout_logs WHERE id = ?", (log_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            conn.close()
+
+    def get_summary(self, today: Optional[str] = None, target_calories: Optional[int] = None, target_protein: Optional[int] = None, target_workouts_per_week: Optional[int] = None) -> dict:
+        from datetime import timedelta
+        if today is None:
+            today = datetime.now().strftime("%Y-%m-%d")
+        
+        today_date = datetime.strptime(today, "%Y-%m-%d")
+        seven_days_ago = (today_date - timedelta(days=6)).strftime("%Y-%m-%d")
+
+        conn = self._conn()
+        try:
+            nut_rows = conn.execute(
+                "SELECT date, calories, protein_grams FROM nutrition_logs "
+                "WHERE date >= ? AND date <= ?", (seven_days_ago, today)
+            ).fetchall()
+            
+            logged_nutrition_days = len(nut_rows)
+            avg_calories = None
+            avg_protein = None
+            if logged_nutrition_days > 0:
+                avg_calories = sum(r["calories"] for r in nut_rows) / logged_nutrition_days
+                avg_protein = sum(r["protein_grams"] for r in nut_rows) / logged_nutrition_days
+
+            work_rows = conn.execute(
+                "SELECT id, completed FROM workout_logs "
+                "WHERE date >= ? AND date <= ?", (seven_days_ago, today)
+            ).fetchall()
+            
+            logged_workout_count = len(work_rows)
+            completed_count = sum(1 for r in work_rows if r["completed"])
+
+            summary = {
+                "window_days": 7,
+                "nutrition": {
+                    "logged_days": logged_nutrition_days,
+                    "coverage": round((logged_nutrition_days / 7.0) * 100, 1),
+                    "avg_calories": round(avg_calories, 1) if avg_calories is not None else None,
+                    "avg_protein": round(avg_protein, 1) if avg_protein is not None else None,
+                },
+                "workouts": {
+                    "logged_count": logged_workout_count,
+                    "completed_count": completed_count,
+                }
+            }
+            if target_calories:
+                summary["nutrition"]["calorie_target"] = target_calories
+                if avg_calories is not None:
+                    summary["nutrition"]["calorie_adherence"] = round((avg_calories / target_calories) * 100, 1)
+            
+            if target_protein:
+                summary["nutrition"]["protein_target"] = target_protein
+                if avg_protein is not None:
+                    summary["nutrition"]["protein_adherence"] = round((avg_protein / target_protein) * 100, 1)
+
+            if target_workouts_per_week is not None:
+                summary["workouts"]["target_frequency"] = target_workouts_per_week
+                summary["workouts"]["adherence"] = round((completed_count / target_workouts_per_week) * 100, 1) if target_workouts_per_week > 0 else 0.0
+
+            return summary
+        finally:
+            conn.close()
+

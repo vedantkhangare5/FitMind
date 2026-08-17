@@ -13,8 +13,8 @@ from app.tools import registry, tool_declarations
 from app.schemas.knowledge import RetrievalResult
 from app.schemas.rag import Citation
 from app.schemas.agent import AgentRequest, AgentResponse, AgentLLMResponse, ToolCallRecord, CoachRequest, CoachResponse, CoachLLMResponse
-from app.database import ProfileRepository, ProgressRepository
-from app.calculators import generate_fitness_summary
+from app.database import ProfileRepository, ProgressRepository, BehaviorRepository
+from app.calculators import generate_fitness_summary, calculate_bmr, calculate_tdee, calculate_calorie_target, calculate_protein_target
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +106,21 @@ class AgentOrchestrator:
         if self.mode == "coach":
             progress_summary = ProgressRepository().get_summary(goal=profile["goal"])
             prompt += f"\n\nThe user's deterministic progress summary is: {json.dumps(progress_summary)}"
+            
+            bmr = calculate_bmr(
+                weight_kg=profile["weight_kg"],
+                height_cm=profile["height_cm"],
+                age=profile["age"],
+                sex=profile["sex"]
+            )
+            tdee = calculate_tdee(bmr, profile["activity_level"])
+            target_calories = calculate_calorie_target(tdee, profile["goal"])
+            target_protein, _ = calculate_protein_target(profile["weight_kg"], profile["goal"])
+            behavior_summary = BehaviorRepository().get_summary(
+                target_calories=target_calories,
+                target_protein=target_protein
+            )
+            prompt += f"\n\nThe user's 7-day behavioral adherence summary is: {json.dumps(behavior_summary)}"
             
         return prompt
 
@@ -330,6 +345,7 @@ class AgentOrchestrator:
                 else:
                     metrics = {}
                     progress = {}
+                    behavior = {}
                     if profile:
                         metrics = generate_fitness_summary(
                             age=profile["age"],
@@ -341,12 +357,27 @@ class AgentOrchestrator:
                         )
                         progress = ProgressRepository().get_summary(goal=profile["goal"])
                         
+                        bmr = calculate_bmr(
+                            weight_kg=profile["weight_kg"],
+                            height_cm=profile["height_cm"],
+                            age=profile["age"],
+                            sex=profile["sex"]
+                        )
+                        tdee = calculate_tdee(bmr, profile["activity_level"])
+                        target_calories = calculate_calorie_target(tdee, profile["goal"])
+                        target_protein, _ = calculate_protein_target(profile["weight_kg"], profile["goal"])
+                        behavior = BehaviorRepository().get_summary(
+                            target_calories=target_calories,
+                            target_protein=target_protein
+                        )
+                        
                     return CoachResponse(
                         summary=llm_resp.summary,
                         current_status=llm_resp.current_status,
                         recommendations=llm_resp.recommendations,
                         metrics=metrics,
                         progress=progress,
+                        behavior=behavior,
                         citations=valid_citations,
                         tool_calls=tool_call_records,
                         generation_error=False,
@@ -382,6 +413,7 @@ class AgentOrchestrator:
                 recommendations=[],
                 metrics={},
                 progress={},
+                behavior={},
                 citations=[],
                 tool_calls=[],
                 generation_error=generation_error,

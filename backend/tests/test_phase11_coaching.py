@@ -30,7 +30,8 @@ def test_hypothetical_regression(test_profile, tmp_path):
     init_db(db_path=db_file)
     repo.save_profile(**test_profile)
 
-    with patch("app.agent.orchestrator.ProgressRepository") as MockProgressRepo:
+    with patch("app.agent.orchestrator.ProgressRepository") as MockProgressRepo, \
+         patch("app.agent.orchestrator.BehaviorRepository") as MockBehaviorRepo:
         mock_progress_instance = MockProgressRepo.return_value
         mock_progress_instance.get_summary.return_value = {
             "current_weight": 92,
@@ -41,6 +42,9 @@ def test_hypothetical_regression(test_profile, tmp_path):
             "entries_count": 1,
             "note": None
         }
+        
+        mock_behavior_instance = MockBehaviorRepo.return_value
+        mock_behavior_instance.get_summary.return_value = {}
 
         # 1. Ask a hypothetical chat question
         chat_orchestrator = AgentOrchestrator(mode="chat", profile_repo=repo)
@@ -101,9 +105,13 @@ def test_coaching_citation_validation(test_profile, tmp_path):
     init_db(db_path=db_file)
     repo.save_profile(**test_profile)
     
-    with patch("app.agent.orchestrator.ProgressRepository") as MockProgressRepo:
+    with patch("app.agent.orchestrator.ProgressRepository") as MockProgressRepo, \
+         patch("app.agent.orchestrator.BehaviorRepository") as MockBehaviorRepo:
         mock_progress_instance = MockProgressRepo.return_value
         mock_progress_instance.get_summary.return_value = {}
+        
+        mock_behavior_instance = MockBehaviorRepo.return_value
+        mock_behavior_instance.get_summary.return_value = {}
         
         orchestrator = AgentOrchestrator(mode="coach", profile_repo=repo)
         
