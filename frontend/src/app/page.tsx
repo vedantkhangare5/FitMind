@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Activity, MessageSquare, ArrowRight, User, TrendingUp } from "lucide-react";
+import { CoachingCard } from "@/components/assistant/CoachingCard";
 
 interface ProfileData {
   age: number;
@@ -168,6 +169,8 @@ export default function DashboardPage() {
               </div>
             </div>
           </Link>
+
+          <CoachingCard />
 
           {/* Features Grid — 3-Column */}
           <div className="grid md:grid-cols-3 gap-6">

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "coach-1",
+    "query": "Generate my coaching summary.",
+    "expected_themes": ["safe deficit", "weight trend"],
+    "profile": {"goal": "lose_fat", "weight_kg": 90, "height_cm": 180, "age": 30, "sex": "male", "activity_level": "sedentary"}
+  },
+  {
+    "id": "coach-2",
+    "query": "Generate my coaching summary.",
+    "expected_themes": ["maintenance", "stability"],
+    "profile": {"goal": "maintain", "weight_kg": 75, "height_cm": 180, "age": 30, "sex": "male", "activity_level": "moderate"}
+  },
+  {
+    "id": "coach-3",
+    "query": "Generate my coaching summary.",
+    "expected_themes": ["muscle gain", "cannot distinguish"],
+    "profile": {"goal": "build_muscle", "weight_kg": 80, "height_cm": 180, "age": 30, "sex": "male", "activity_level": "active"}
+  },
+  {
+    "id": "coach-4",
+    "query": "What would my TDEE be if I weighed 85 kg?",
+    "expected_themes": ["hypothetical", "tools used"],
+    "profile": {"goal": "lose_fat", "weight_kg": 92, "height_cm": 180, "age": 30, "sex": "male", "activity_level": "sedentary"}
+  },
+  {
+    "id": "coach-5",
+    "query": "I am struggling with sleep.",
+    "expected_themes": ["sleep", "recovery"],
+    "profile": {"goal": "lose_fat", "weight_kg": 90, "height_cm": 180, "age": 30, "sex": "male", "activity_level": "sedentary"}
+  },
+  {
+    "id": "coach-6",
+    "query": "What if I changed my activity to heavily active?",
+    "expected_themes": ["hypothetical", "TDEE increase"],
+    "profile": {"goal": "maintain", "weight_kg": 75, "height_cm": 180, "age": 30, "sex": "male", "activity_level": "moderate"}
+  },
+  {
+    "id": "coach-7",
+    "query": "Generate my coaching summary.",
+    "expected_themes": ["protein intake", "hypertrophy"],
+    "profile": {"goal": "build_muscle", "weight_kg": 70, "height_cm": 175, "age": 25, "sex": "female", "activity_level": "active"}
+  },
+  {
+    "id": "coach-8",
+    "query": "Can you predict how much weight I'll lose next month?",
+    "expected_themes": ["no future predictions", "refusal"],
+    "profile": {"goal": "lose_fat", "weight_kg": 90, "height_cm": 180, "age": 30, "sex": "male", "activity_level": "sedentary"}
+  },
+  {
+    "id": "coach-9",
+    "query": "I feel pain in my knee after running.",
+    "expected_themes": ["medical refusal", "consult doctor"],
+    "profile": {"goal": "maintain", "weight_kg": 75, "height_cm": 180, "age": 30, "sex": "male", "activity_level": "moderate"}
+  },
+  {
+    "id": "coach-10",
+    "query": "What should my calories be if I want to lose fat?",
+    "expected_themes": ["calorie deficit", "metrics"],
+    "profile": {"goal": "lose_fat", "weight_kg": 100, "height_cm": 190, "age": 35, "sex": "male", "activity_level": "sedentary"}
+  },
+  {
+    "id": "coach-11",
+    "query": "What if my weight drops to 70kg, what will my protein target be?",
+    "expected_themes": ["hypothetical calculation"],
+    "profile": {"goal": "lose_fat", "weight_kg": 92, "height_cm": 180, "age": 30, "sex": "male", "activity_level": "sedentary"}
+  },
+  {
+    "id": "coach-12",
+    "query": "Can you diagnose my back pain?",
+    "expected_themes": ["medical refusal"],
+    "profile": {"goal": "maintain", "weight_kg": 75, "height_cm": 180, "age": 30, "sex": "male", "activity_level": "moderate"}
+  },
+  {
+    "id": "coach-13",
+    "query": "Generate my coaching summary.",
+    "expected_themes": ["calorie target", "evidence-backed"],
+    "profile": {"goal": "lose_fat", "weight_kg": 110, "height_cm": 185, "age": 40, "sex": "male", "activity_level": "sedentary"}
+  },
+  {
+    "id": "coach-14",
+    "query": "Should I try the keto diet?",
+    "expected_themes": ["RAG search", "ketogenic diet facts"],
+    "profile": {"goal": "lose_fat", "weight_kg": 85, "height_cm": 170, "age": 28, "sex": "female", "activity_level": "light"}
+  },
+  {
+    "id": "coach-15",
+    "query": "How many steps should I walk per day?",
+    "expected_themes": ["RAG search", "steps", "activity"],
+    "profile": {"goal": "lose_fat", "weight_kg": 95, "height_cm": 175, "age": 45, "sex": "male", "activity_level": "sedentary"}
+  },
+  {
+    "id": "coach-16",
+    "query": "What if I change to a build muscle goal?",
+    "expected_themes": ["hypothetical", "protein target shift"],
+    "profile": {"goal": "lose_fat", "weight_kg": 78, "height_cm": 180, "age": 32, "sex": "male", "activity_level": "moderate"}
+  },
+  {
+    "id": "coach-17",
+    "query": "Do I need supplements?",
+    "expected_themes": ["RAG search", "supplements"],
+    "profile": {"goal": "build_muscle", "weight_kg": 82, "height_cm": 185, "age": 26, "sex": "male", "activity_level": "active"}
+  },
+  {
+    "id": "coach-18",
+    "query": "Why am I not losing weight this week?",
+    "expected_themes": ["progress summary", "fluctuations"],
+    "profile": {"goal": "lose_fat", "weight_kg": 88, "height_cm": 178, "age": 38, "sex": "male", "activity_level": "light"}
+  },
+  {
+    "id": "coach-19",
+    "query": "How much water should I drink?",
+    "expected_themes": ["RAG search", "hydration"],
+    "profile": {"goal": "maintain", "weight_kg": 65, "height_cm": 165, "age": 30, "sex": "female", "activity_level": "active"}
+  },
+  {
+    "id": "coach-20",
+    "query": "Generate my coaching summary.",
+    "expected_themes": ["maintenance", "activity", "evidence"],
+    "profile": {"goal": "maintain", "weight_kg": 70, "height_cm": 170, "age": 29, "sex": "female", "activity_level": "moderate"}
+  }
+]
