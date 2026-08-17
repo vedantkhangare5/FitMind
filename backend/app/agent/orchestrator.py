@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import time
 from typing import List, Dict, Any, Optional
 from pydantic import ValidationError
 
@@ -108,6 +109,7 @@ class AgentOrchestrator:
         return resolved
 
     def ask(self, request: AgentRequest) -> AgentResponse:
+        start_time = time.time()
         # Load profile at the start of each request
         profile = self._profile_repo.get_profile()
         profile_used = profile is not None
@@ -144,10 +146,10 @@ class AgentOrchestrator:
             except APIError as e:
                 logger.error(f"APIError: {e}")
                 error_code = "MODEL_RATE_LIMIT" if e.code == 429 else "API_ERROR"
-                return self._error_response(error_code=error_code, generation_error=True, profile_used=profile_used)
+                return self._error_response(error_code=error_code, generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
             except Exception as e:
                 logger.error(f"Unexpected GenerateContent error: {e}")
-                return self._error_response(error_code="INTERNAL_ERROR", generation_error=True, profile_used=profile_used)
+                return self._error_response(error_code="INTERNAL_ERROR", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
 
             # Check if model requested function calls
             if response.function_calls:
@@ -158,7 +160,7 @@ class AgentOrchestrator:
                 total_tool_calls += len(response.function_calls)
                 if total_tool_calls > self.MAX_TOOL_CALLS:
                     logger.warning("Max tool calls exceeded.")
-                    return self._error_response(error_code="MAX_TOOL_CALLS_EXCEEDED", generation_error=True, profile_used=profile_used)
+                    return self._error_response(error_code="MAX_TOOL_CALLS_EXCEEDED", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
 
                 function_responses = []
                 for call in response.function_calls:
@@ -176,7 +178,9 @@ class AgentOrchestrator:
                     args = self._resolve_tool_args(name, dict(args), profile)
 
                     logger.info(f"Executing tool: {name}")
+                    tool_start = time.time()
                     result_envelope = registry.execute(name, args)
+                    tool_duration = int((time.time() - tool_start) * 1000)
                     
                     # Track retries
                     if not result_envelope["success"]:
@@ -197,14 +201,14 @@ class AgentOrchestrator:
                     # Check retry limits
                     if consecutive_tool_retries.get(name, 0) > self.MAX_TOOL_RETRIES_PER_CALL:
                         logger.warning(f"Tool retry limit exceeded for {name}.")
-                        return self._error_response(error_code="TOOL_RETRY_LIMIT_EXCEEDED", generation_error=True, profile_used=profile_used)
+                        return self._error_response(error_code="TOOL_RETRY_LIMIT_EXCEEDED", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
                         
                     # Create safe result for frontend (hide huge chunks from search_knowledge)
                     safe_result = result_envelope.copy()
                     if name == "search_knowledge" and safe_result.get("success"):
                         safe_result["data"] = {"message": "Knowledge retrieved successfully"}
                         
-                    tool_call_records.append(ToolCallRecord(tool_name=name, status=status, result=safe_result))
+                    tool_call_records.append(ToolCallRecord(tool_name=name, status=status, result=safe_result, duration_ms=tool_duration))
                     
                     # Package the response to send back to the model
                     function_responses.append(
@@ -233,7 +237,7 @@ class AgentOrchestrator:
                     llm_resp = AgentLLMResponse.model_validate_json(raw_text)
                 except ValidationError as e:
                     logger.error(f"Malformed JSON from LLM: {e}")
-                    return self._error_response(error_code="MALFORMED_RESPONSE", generation_error=True, profile_used=profile_used)
+                    return self._error_response(error_code="MALFORMED_RESPONSE", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
 
                 # Citation Validation Flow
                 valid_citations: List[Citation] = []
@@ -261,7 +265,7 @@ class AgentOrchestrator:
                     if len(valid_citations) == 0:
                         if len(retrieved_knowledge) > 0:
                             logger.warning("Citation validation failed. Grounded=true with retrieved docs but 0 valid citations.")
-                            return self._error_response(error_code="CITATION_VALIDATION_FAILED", generation_error=True, profile_used=profile_used)
+                            return self._error_response(error_code="CITATION_VALIDATION_FAILED", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
                         else:
                             grounded = False
 
@@ -274,16 +278,17 @@ class AgentOrchestrator:
                     generation_error=False,
                     error_code=None,
                     profile_used=profile_used,
+                    total_duration_ms=int((time.time() - start_time) * 1000)
                 )
 
             # If response text is unexpectedly empty and no function calls
-            return self._error_response(error_code="MALFORMED_RESPONSE", generation_error=True, profile_used=profile_used)
+            return self._error_response(error_code="MALFORMED_RESPONSE", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
             
         # End of while loop - max iterations exceeded
         logger.warning("Max iterations exceeded.")
-        return self._error_response(error_code="MAX_ITERATIONS_EXCEEDED", generation_error=True, profile_used=profile_used)
+        return self._error_response(error_code="MAX_ITERATIONS_EXCEEDED", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
 
-    def _error_response(self, error_code: str, generation_error: bool, profile_used: bool = False) -> AgentResponse:
+    def _error_response(self, error_code: str, generation_error: bool, profile_used: bool = False, total_duration_ms: Optional[int] = None) -> AgentResponse:
         return AgentResponse(
             answer="An error occurred while processing your request.",
             citations=[],
@@ -293,4 +298,5 @@ class AgentOrchestrator:
             generation_error=generation_error,
             error_code=error_code,
             profile_used=profile_used,
+            total_duration_ms=total_duration_ms
         )

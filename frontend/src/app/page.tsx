@@ -38,6 +38,7 @@ const GOAL_LABELS: Record<string, string> = {
 export default function DashboardPage() {
   const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -48,9 +49,12 @@ export default function DashboardPage() {
         if (res.ok) {
           const data: ProfileResponse = await res.json();
           setProfileData(data);
+          setFetchError(false);
+        } else {
+          setFetchError(true);
         }
       } catch {
-        // Silently fail — profile card shows empty state
+        setFetchError(true);
       } finally {
         setProfileLoading(false);
       }
@@ -93,6 +97,10 @@ export default function DashboardPage() {
                       <div className="animate-spin h-4 w-4 border-2 border-violet-500 border-t-transparent rounded-full" />
                       <span className="text-sm">Loading profile...</span>
                     </div>
+                  ) : fetchError ? (
+                    <p className="text-red-500 dark:text-red-400">
+                      Unable to load profile due to a network error.
+                    </p>
                   ) : profileData ? (
                     <div>
                       <p className="text-zinc-500 dark:text-zinc-400 mb-4">

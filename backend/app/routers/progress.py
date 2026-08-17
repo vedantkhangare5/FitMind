@@ -49,7 +49,7 @@ def add_progress_entry(
     Add a new progress entry.
     """
     recorded_at = entry.recorded_at
-    if not recorded_at:
+    if not recorded_at or not str(recorded_at).strip():
         recorded_at = datetime.now(timezone.utc).isoformat()
     else:
         # Validate ISO 8601

@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from app.schemas.rag import Citation
 
 class AgentRequest(BaseModel):
-    query: str = Field(..., min_length=1)
+    query: str = Field(..., min_length=1, max_length=2000)
 
 class ToolCallRecord(BaseModel):
     tool_name: str
@@ -27,3 +27,4 @@ class AgentResponse(BaseModel):
     generation_error: bool = Field(False, description="True if an API, loop limit, or infrastructure error occurred")
     error_code: Optional[str] = Field(None, description="Machine-readable error code if generation_error is true or validation failed")
     profile_used: bool = Field(False, description="True if a saved fitness profile was used for context")
+    total_duration_ms: Optional[int] = Field(None, description="Total execution time in milliseconds")

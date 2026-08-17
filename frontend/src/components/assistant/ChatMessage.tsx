@@ -66,7 +66,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 {message.errorCode === "CITATION_VALIDATION_FAILED" && "Verification Failed"}
                 {message.errorCode === "MODEL_RATE_LIMIT" && "System Busy"}
                 {message.errorCode === "INSUFFICIENT_CONTEXT" && "Insufficient Information"}
-                {!["CITATION_VALIDATION_FAILED", "MODEL_RATE_LIMIT", "INSUFFICIENT_CONTEXT"].includes(message.errorCode || "") && "Error"}
+                {message.errorCode === "NETWORK_ERROR" && "Connection Error"}
+                {message.errorCode === "API_ERROR" && "Service Error"}
+                {message.errorCode === "MAX_TOOL_CALLS_EXCEEDED" && "Too Complex"}
+                {message.errorCode === "TOOL_RETRY_LIMIT_EXCEEDED" && "Action Failed"}
+                {message.errorCode === "MALFORMED_RESPONSE" && "Format Error"}
+                {message.errorCode === "MAX_ITERATIONS_EXCEEDED" && "Timeout"}
+                {!["CITATION_VALIDATION_FAILED", "MODEL_RATE_LIMIT", "INSUFFICIENT_CONTEXT", "NETWORK_ERROR", "API_ERROR", "MAX_TOOL_CALLS_EXCEEDED", "TOOL_RETRY_LIMIT_EXCEEDED", "MALFORMED_RESPONSE", "MAX_ITERATIONS_EXCEEDED"].includes(message.errorCode || "") && "Error"}
               </p>
               <p className="text-sm opacity-90 leading-relaxed">{message.content}</p>
             </div>

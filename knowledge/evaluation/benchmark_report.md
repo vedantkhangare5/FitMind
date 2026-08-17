@@ -8,8 +8,8 @@
 ## Generation Metrics
 > **WARNING**: Generation metrics are NOT valid performance measurements because API 429 rate limits contaminated the evaluation.
 
-- **Groundedness**: 20.0%
-- **Citation Correctness**: 20.0%
-- **Refusal Accuracy**: 6.7%
+- **Groundedness**: 34.3%
+- **Citation Correctness**: 34.3%
+- **Refusal Accuracy**: 0.0%
 
 *(Note: This benchmark measures system behavior organically and is not a target for direct optimization.)*

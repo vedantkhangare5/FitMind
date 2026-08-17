@@ -39,6 +39,7 @@ export default function ProgressPage() {
   const [loading, setLoading] = useState(true);
   const [newWeight, setNewWeight] = useState("");
   const [adding, setAdding] = useState(false);
+  const [offline, setOffline] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -47,9 +48,13 @@ export default function ProgressPage() {
       if (res.ok) {
         const json = await res.json();
         setData(json);
+        setOffline(false);
+      } else {
+        setOffline(true);
       }
     } catch (e) {
       console.error(e);
+      setOffline(true);
     } finally {
       setLoading(false);
     }
@@ -75,7 +80,13 @@ export default function ProgressPage() {
       if (res.ok) {
         setNewWeight("");
         await fetchData();
+      } else {
+        const errorData = await res.json();
+        alert(errorData.detail || "Failed to add entry.");
       }
+    } catch (e) {
+      console.error(e);
+      alert("Network error while adding entry.");
     } finally {
       setAdding(false);
     }
@@ -112,11 +123,19 @@ export default function ProgressPage() {
       <div className="max-w-4xl mx-auto px-6 py-12 md:py-20 space-y-8">
         
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/" className="p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
-          <h1 className="text-3xl font-bold tracking-tight">Progress History</h1>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
+              <ArrowLeft className="w-6 h-6" />
+            </Link>
+            <h1 className="text-3xl font-bold tracking-tight">Progress History</h1>
+          </div>
+          {offline && (
+            <span className="px-3 py-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-sm font-medium rounded-full flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+              Offline
+            </span>
+          )}
         </div>
 
         {/* Summary Cards */}

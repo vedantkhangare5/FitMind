@@ -14,7 +14,7 @@ def execute_search_knowledge(query: str, top_k: int = 5) -> dict:
     service = get_retrieval_service()
     
     # RetrievalService.search returns a list of RetrievalResult Pydantic models
-    results = service.search(query=query, top_k=top_k)
+    results = service.search(query=query, top_k=top_k, filters={"source_status": {"$ne": "test_only"}})
     
     return {
         "results": [result.model_dump() for result in results]

@@ -9,7 +9,7 @@ def ask_agent(request: AgentRequest):
     try:
         orchestrator = AgentOrchestrator()
         return orchestrator.ask(request)
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
+    except ValueError:
+        raise HTTPException(status_code=503, detail="Service temporarily unavailable")
+    except Exception:
         raise HTTPException(status_code=500, detail="Internal server error")

@@ -72,13 +72,14 @@ export function ChatContainer() {
       // Remove loading message
       setMessages(prev => {
         const withoutLoading = prev.slice(0, -1);
+        const isNetwork = err instanceof TypeError && err.message.includes("Failed to fetch");
         return [
           ...withoutLoading,
           {
             role: "assistant",
-            content: err instanceof Error ? err.message : "An unknown error occurred.",
+            content: isNetwork ? "Unable to connect to the FitMind service. Please check your network connection." : (err instanceof Error ? err.message : "An unknown error occurred."),
             isError: true,
-            errorCode: "NETWORK_ERROR",
+            errorCode: isNetwork ? "NETWORK_ERROR" : "API_ERROR",
           }
         ];
       });
