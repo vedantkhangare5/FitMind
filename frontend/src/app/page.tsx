@@ -1,34 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Activity, MessageSquare, ArrowRight, User, TrendingUp } from "lucide-react";
 import { CoachingCard } from "@/components/assistant/CoachingCard";
-
-interface ProfileData {
-  age: number;
-  sex: string;
-  height_cm: number;
-  weight_kg: number;
-  activity_level: string;
-  goal: string;
-}
-
-interface DerivedMetrics {
-  bmi: number;
-  bmi_category: string;
-  bmr: number;
-  tdee: number;
-  calorie_target: number;
-  protein_target_min: number;
-  protein_target_max: number;
-}
-
-interface ProfileResponse {
-  profile: ProfileData;
-  updated_at: string;
-  derived_metrics: DerivedMetrics;
-}
+import { useProfile } from "@/context/ProfileContext";
 
 const GOAL_LABELS: Record<string, string> = {
   lose_fat: "Lose Fat",
@@ -37,31 +12,7 @@ const GOAL_LABELS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(false);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const res = await fetch(`${apiUrl}/api/profile`);
-        if (res.ok) {
-          const data: ProfileResponse = await res.json();
-          setProfileData(data);
-          setFetchError(false);
-        } else {
-          setFetchError(true);
-        }
-      } catch {
-        setFetchError(true);
-      } finally {
-        setProfileLoading(false);
-      }
-    };
-    fetchProfile();
-  }, []);
+  const { profileData, loading: profileLoading, error: fetchError } = useProfile();
 
   return (
     <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">
@@ -100,7 +51,7 @@ export default function DashboardPage() {
                     </div>
                   ) : fetchError ? (
                     <p className="text-red-500 dark:text-red-400">
-                      Unable to load profile due to a network error.
+                      {fetchError}
                     </p>
                   ) : profileData ? (
                     <div>

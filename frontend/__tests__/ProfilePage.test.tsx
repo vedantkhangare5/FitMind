@@ -26,21 +26,25 @@ jest.mock("lucide-react", () => ({
   CheckCircle: () => <span data-testid="check-icon" />,
 }));
 
-// Mock fetch
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
-
 import ProfilePage from "@/app/profile/page";
+import { useProfile } from "@/context/ProfileContext";
+
+jest.mock("@/context/ProfileContext", () => ({
+  useProfile: jest.fn(),
+}));
 
 describe("ProfilePage", () => {
   beforeEach(() => {
-    mockFetch.mockReset();
+    jest.clearAllMocks();
   });
 
   it("renders empty state when no profile exists", async () => {
-    mockFetch.mockResolvedValueOnce({
-      status: 404,
-      ok: false,
+    (useProfile as jest.Mock).mockReturnValue({
+      profileData: null,
+      loading: false,
+      error: null,
+      updateProfile: jest.fn(),
+      deleteProfile: jest.fn(),
     });
 
     render(<ProfilePage />);
@@ -52,10 +56,8 @@ describe("ProfilePage", () => {
   });
 
   it("renders profile data when profile exists", async () => {
-    mockFetch.mockResolvedValueOnce({
-      status: 200,
-      ok: true,
-      json: async () => ({
+    (useProfile as jest.Mock).mockReturnValue({
+      profileData: {
         profile: {
           age: 21,
           sex: "male",
@@ -74,7 +76,11 @@ describe("ProfilePage", () => {
           protein_target_min: 147,
           protein_target_max: 202,
         },
-      }),
+      },
+      loading: false,
+      error: null,
+      updateProfile: jest.fn(),
+      deleteProfile: jest.fn(),
     });
 
     render(<ProfilePage />);
@@ -87,10 +93,8 @@ describe("ProfilePage", () => {
   });
 
   it("shows calculated metrics from backend", async () => {
-    mockFetch.mockResolvedValueOnce({
-      status: 200,
-      ok: true,
-      json: async () => ({
+    (useProfile as jest.Mock).mockReturnValue({
+      profileData: {
         profile: {
           age: 21,
           sex: "male",
@@ -109,7 +113,11 @@ describe("ProfilePage", () => {
           protein_target_min: 147,
           protein_target_max: 202,
         },
-      }),
+      },
+      loading: false,
+      error: null,
+      updateProfile: jest.fn(),
+      deleteProfile: jest.fn(),
     });
 
     render(<ProfilePage />);

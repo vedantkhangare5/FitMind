@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface NutritionEntry {
   date: string;
@@ -19,12 +20,8 @@ export function NutritionLog() {
 
   const fetchLogs = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/behavior/nutrition`);
-      if (res.ok) {
-        const data = await res.json();
-        setEntries(data);
-      }
+      const data = await api.getNutritionLogs();
+      setEntries(data);
     } catch (err) {
       console.error("Failed to fetch nutrition logs", err);
     }
@@ -34,7 +31,6 @@ export function NutritionLog() {
     const today = new Date().toISOString().split("T")[0];
     // eslint-disable-next-line
     setDate(today);
-    // eslint-disable-next-line
     fetchLogs();
   }, []);
 
@@ -44,20 +40,11 @@ export function NutritionLog() {
     setLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/behavior/nutrition`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date,
-          calories: parseInt(calories),
-          protein_grams: parseInt(protein),
-        }),
+      await api.addNutritionLog({
+        date,
+        calories: parseInt(calories),
+        protein_grams: parseInt(protein),
       });
-
-      if (!res.ok) {
-        throw new Error("Failed to save nutrition log");
-      }
 
       setCalories("");
       setProtein("");
@@ -75,10 +62,7 @@ export function NutritionLog() {
 
   const handleDelete = async (dateToDelete: string) => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      await fetch(`${apiUrl}/api/behavior/nutrition/${dateToDelete}`, {
-        method: "DELETE",
-      });
+      await api.deleteNutritionLog(dateToDelete);
       fetchLogs();
     } catch (err) {
       console.error("Failed to delete", err);

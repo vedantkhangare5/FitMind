@@ -5,6 +5,7 @@ import { Message, ChatMessage } from "./ChatMessage";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Send } from "lucide-react";
+import { api, ApiError } from "@/lib/api";
 
 export function ChatContainer() {
   const [messages, setMessages] = useState<Message[]>([
@@ -40,21 +41,10 @@ export function ChatContainer() {
     setMessages(prev => [...prev, { role: "assistant", content: "", isLoading: true }]);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/agent/ask`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
-      });
-
-      const data = await res.json();
+      const data = await api.askAgent({ query });
 
       // Remove loading message
       setMessages(prev => prev.slice(0, -1));
-
-      if (!res.ok) {
-        throw new Error(data.detail || "Failed to get response");
-      }
 
       setMessages(prev => [
         ...prev,
@@ -73,13 +63,26 @@ export function ChatContainer() {
       setMessages(prev => {
         const withoutLoading = prev.slice(0, -1);
         const isNetwork = err instanceof TypeError && err.message.includes("Failed to fetch");
+        let errorMessage = "An unknown error occurred.";
+        let errorCode = "API_ERROR";
+        
+        if (err instanceof ApiError) {
+          errorMessage = err.message;
+          errorCode = err.code || "API_ERROR";
+        } else if (isNetwork) {
+          errorMessage = "Unable to connect to the FitMind service. Please check your network connection.";
+          errorCode = "NETWORK_ERROR";
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+
         return [
           ...withoutLoading,
           {
             role: "assistant",
-            content: isNetwork ? "Unable to connect to the FitMind service. Please check your network connection." : (err instanceof Error ? err.message : "An unknown error occurred."),
+            content: errorMessage,
             isError: true,
-            errorCode: isNetwork ? "NETWORK_ERROR" : "API_ERROR",
+            errorCode: errorCode,
           }
         ];
       });

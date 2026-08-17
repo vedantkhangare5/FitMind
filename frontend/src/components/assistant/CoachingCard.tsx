@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Activity, BookOpen, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { api, ApiError } from "@/lib/api";
 
 interface Citation {
   document_id: string;
@@ -39,25 +40,17 @@ export function CoachingCard() {
     setLoading(true);
     setError(null);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/coach`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to generate coaching summary");
-      }
-
-      const json: CoachResponse = await res.json();
+      const json = await api.coach({});
+      
       if (json.generation_error) {
         setError(`Coaching could not be generated. Error code: ${json.error_code}`);
       } else {
         setData(json);
       }
     } catch (err: unknown) {
-      if (err instanceof Error) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else if (err instanceof Error) {
         setError(err.message);
       } else {
         setError("An unknown error occurred.");

@@ -19,6 +19,7 @@ describe("ProgressPage", () => {
   it("renders empty state correctly", async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
+      headers: { get: () => 'application/json' },
       json: async () => ({
         entries: [],
         summary: {
@@ -46,6 +47,7 @@ describe("ProgressPage", () => {
   it("renders history and summary", async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
+      headers: { get: () => 'application/json' },
       json: async () => ({
         entries: [
           { id: 1, weight_kg: 90.0, recorded_at: "2026-08-01T00:00:00Z" },

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, User, Save, Trash2, Pencil, X, CheckCircle } from "lucide-react";
+import { useProfile } from "@/context/ProfileContext";
 
 interface ProfileData {
   age: number;
@@ -11,22 +12,6 @@ interface ProfileData {
   weight_kg: number;
   activity_level: string;
   goal: string;
-}
-
-interface DerivedMetrics {
-  bmi: number;
-  bmi_category: string;
-  bmr: number;
-  tdee: number;
-  calorie_target: number;
-  protein_target_min: number;
-  protein_target_max: number;
-}
-
-interface ProfileResponse {
-  profile: ProfileData;
-  updated_at: string;
-  derived_metrics: DerivedMetrics;
 }
 
 const ACTIVITY_OPTIONS = [
@@ -53,89 +38,59 @@ const DEFAULT_FORM: ProfileData = {
 };
 
 export default function ProfilePage() {
-  const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
+  const { profileData, loading, error: contextError, updateProfile, deleteProfile } = useProfile();
+  
   const [formData, setFormData] = useState<ProfileData>(DEFAULT_FORM);
   const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await fetch(`${apiUrl}/api/profile`);
-        if (res.status === 404) {
-          setProfileData(null);
-          setIsEditing(true); // Show form for creation
-          return;
-        }
-        if (!res.ok) throw new Error("Failed to load profile");
-        const data: ProfileResponse = await res.json();
-        setProfileData(data);
-        setFormData(data.profile);
-      } catch (err: unknown) {
-        if (err instanceof Error) setError(err.message);
-        else setError("An unknown error occurred");
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (profileData) {
+      // eslint-disable-next-line
+      setFormData(profileData.profile);
+      setIsEditing(false);
+    } else if (!loading) {
+      setIsEditing(true);
+    }
+  }, [profileData, loading]);
 
-    fetchProfile();
-  }, [apiUrl]);
+  const error = localError || contextError;
 
   const handleSave = async () => {
     setSaving(true);
-    setError(null);
+    setLocalError(null);
     setSuccessMessage(null);
     try {
-      const res = await fetch(`${apiUrl}/api/profile`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          age: Number(formData.age),
-          height_cm: Number(formData.height_cm),
-          weight_kg: Number(formData.weight_kg),
-        }),
+      await updateProfile({
+        ...formData,
+        age: Number(formData.age),
+        height_cm: Number(formData.height_cm),
+        weight_kg: Number(formData.weight_kg),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.detail) {
-          if (typeof data.detail === "string") throw new Error(data.detail);
-          throw new Error(JSON.stringify(data.detail, null, 2));
-        }
-        throw new Error("Failed to save profile");
-      }
-      setProfileData(data);
-      setFormData(data.profile);
       setIsEditing(false);
       setSuccessMessage("Profile saved successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
-      else setError("An unknown error occurred");
+      if (err instanceof Error) setLocalError(err.message);
+      else setLocalError("An unknown error occurred");
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    setError(null);
+    setLocalError(null);
     try {
-      const res = await fetch(`${apiUrl}/api/profile`, { method: "DELETE" });
-      if (!res.ok && res.status !== 204) throw new Error("Failed to delete profile");
-      setProfileData(null);
+      await deleteProfile();
       setFormData(DEFAULT_FORM);
       setIsEditing(true);
       setSuccessMessage("Profile deleted.");
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
-      else setError("An unknown error occurred");
+      if (err instanceof Error) setLocalError(err.message);
+      else setLocalError("An unknown error occurred");
     }
   };
 

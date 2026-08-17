@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { ProgressChart } from "@/components/progress/ProgressChart";
 import { Button } from "@/components/ui/Button";
+import { api, ApiError } from "@/lib/api";
 
 interface ProgressEntry {
   id: number;
@@ -43,15 +44,9 @@ export default function ProgressPage() {
 
   const fetchData = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/progress`);
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
-        setOffline(false);
-      } else {
-        setOffline(true);
-      }
+      const json = await api.getProgress();
+      setData(json);
+      setOffline(false);
     } catch (e) {
       console.error(e);
       setOffline(true);
@@ -71,22 +66,16 @@ export default function ProgressPage() {
 
     setAdding(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/progress`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weight_kg: Number(newWeight) }),
-      });
-      if (res.ok) {
-        setNewWeight("");
-        await fetchData();
-      } else {
-        const errorData = await res.json();
-        alert(errorData.detail || "Failed to add entry.");
-      }
+      await api.addProgress({ weight_kg: Number(newWeight) });
+      setNewWeight("");
+      await fetchData();
     } catch (e) {
       console.error(e);
-      alert("Network error while adding entry.");
+      if (e instanceof ApiError) {
+        alert(e.message || "Failed to add entry.");
+      } else {
+        alert("Network error while adding entry.");
+      }
     } finally {
       setAdding(false);
     }
@@ -95,13 +84,8 @@ export default function ProgressPage() {
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this entry?")) return;
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/progress/${id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        await fetchData();
-      }
+      await api.deleteProgress(id);
+      await fetchData();
     } catch (e) {
       console.error(e);
     }
@@ -128,7 +112,7 @@ export default function ProgressPage() {
             <Link href="/" className="p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
               <ArrowLeft className="w-6 h-6" />
             </Link>
-            <h1 className="text-3xl font-bold tracking-tight">Progress History</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Tracking: Progress</h1>
           </div>
           {offline && (
             <span className="px-3 py-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-sm font-medium rounded-full flex items-center gap-2">

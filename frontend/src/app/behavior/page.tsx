@@ -5,6 +5,7 @@ import { ArrowLeft, Activity } from "lucide-react";
 import { NutritionLog } from "@/components/behavior/NutritionLog";
 import { WorkoutLog } from "@/components/behavior/WorkoutLog";
 import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 
 interface BehaviorSummary {
   window_days: number;
@@ -31,19 +32,15 @@ export default function BehaviorPage() {
 
   const fetchSummary = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/behavior/summary`);
-      if (res.ok) {
-        const data = await res.json();
-        setSummary(data);
-      }
+      const data = await api.getBehaviorSummary();
+      setSummary(data);
     } catch (err) {
       console.error("Failed to fetch summary", err);
     }
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
     fetchSummary();
   }, []);
 
@@ -63,7 +60,7 @@ export default function BehaviorPage() {
             <Activity className="w-8 h-8" />
           </div>
           <h1 className="text-4xl font-bold tracking-tight mb-4">
-            Behavioral Tracking
+            Tracking: Behavior
           </h1>
           <p className="text-lg text-zinc-500 dark:text-zinc-400">
             Log your daily nutrition and workouts to track adherence over time.

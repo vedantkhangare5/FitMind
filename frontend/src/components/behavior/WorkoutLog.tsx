@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Trash2, CheckCircle2, Circle } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface WorkoutEntry {
   id: number;
@@ -22,12 +23,8 @@ export function WorkoutLog() {
 
   const fetchLogs = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/behavior/workouts`);
-      if (res.ok) {
-        const data = await res.json();
-        setEntries(data);
-      }
+      const data = await api.getWorkoutLogs();
+      setEntries(data);
     } catch (err) {
       console.error("Failed to fetch workout logs", err);
     }
@@ -37,7 +34,6 @@ export function WorkoutLog() {
     const today = new Date().toISOString().split("T")[0];
     // eslint-disable-next-line
     setDate(today);
-    // eslint-disable-next-line
     fetchLogs();
   }, []);
 
@@ -47,21 +43,12 @@ export function WorkoutLog() {
     setLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/behavior/workouts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date,
-          workout_type: workoutType,
-          duration_minutes: parseInt(duration),
-          completed,
-        }),
+      await api.addWorkoutLog({
+        date,
+        workout_type: workoutType,
+        duration_minutes: parseInt(duration),
+        completed,
       });
-
-      if (!res.ok) {
-        throw new Error("Failed to save workout log");
-      }
 
       setWorkoutType("");
       setDuration("");
@@ -79,10 +66,7 @@ export function WorkoutLog() {
 
   const handleDelete = async (id: number) => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      await fetch(`${apiUrl}/api/behavior/workouts/${id}`, {
-        method: "DELETE",
-      });
+      await api.deleteWorkoutLog(id);
       fetchLogs();
     } catch (err) {
       console.error("Failed to delete", err);

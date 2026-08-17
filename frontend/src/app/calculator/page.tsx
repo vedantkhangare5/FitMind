@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { api, ApiError } from "@/lib/api";
 
 interface FitnessResponse {
   bmi: number;
@@ -35,31 +36,22 @@ export default function CalculatorPage() {
     setResult(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${apiUrl}/api/fitness/calculate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          age: Number(formData.age),
-          height_cm: Number(formData.height_cm),
-          weight_kg: Number(formData.weight_kg),
-        })
+      const data = await api.calculateFitness({
+        ...formData,
+        age: Number(formData.age),
+        height_cm: Number(formData.height_cm),
+        weight_kg: Number(formData.weight_kg),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (data.detail) {
-          // Format validation errors
-          throw new Error(JSON.stringify(data.detail, null, 2));
-        }
-        throw new Error("Failed to calculate fitness profile");
-      }
 
       setResult(data);
     } catch (err: unknown) {
-      if (err instanceof Error) {
+      if (err instanceof ApiError) {
+        if (err.code === "VALIDATION_ERROR" || err.details) {
+            setError(JSON.stringify(err.details || err.message, null, 2));
+        } else {
+            setError(err.message);
+        }
+      } else if (err instanceof Error) {
         setError(err.message);
       } else {
         setError("An unknown error occurred");
