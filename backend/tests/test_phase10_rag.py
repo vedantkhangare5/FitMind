@@ -67,7 +67,7 @@ def test_citation_validation_strips_hallucinations():
                 }
             }
             
-            res = agent.ask(AgentRequest(query="test"))
+            res = agent.ask(AgentRequest(query="test"), user_id=1)
             
             assert res.generation_error is False
             assert res.grounded is True

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Activity, MessageSquare, ArrowRight, User, TrendingUp } from "lucide-react";
 import { CoachingCard } from "@/components/assistant/CoachingCard";
 import { useProfile } from "@/context/ProfileContext";
+import { useAuth } from "@/context/AuthContext";
+import { LogOut } from "lucide-react";
 
 const GOAL_LABELS: Record<string, string> = {
   lose_fat: "Lose Fat",
@@ -13,11 +15,20 @@ const GOAL_LABELS: Record<string, string> = {
 
 export default function DashboardPage() {
   const { profileData, loading: profileLoading, error: fetchError } = useProfile();
+  const { logout } = useAuth();
 
   return (
     <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">
       <div className="max-w-5xl mx-auto px-6 py-12 md:py-20">
-        <header className="text-center mb-16">
+        <header className="text-center mb-16 relative">
+          <button 
+            onClick={logout}
+            className="absolute top-0 right-0 flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
+          
           <div className="w-16 h-16 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-bold text-2xl tracking-tighter shadow-lg mx-auto mb-6">
             FM
           </div>

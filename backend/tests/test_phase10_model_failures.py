@@ -14,7 +14,7 @@ def test_rate_limit_handling(mock_client_class):
     
     agent = AgentOrchestrator(profile_repo=MagicMock())
     
-    res = agent.ask(AgentRequest(query="Hello"))
+    res = agent.ask(AgentRequest(query="Hello"), user_id=1)
     
     assert res.generation_error is True
     assert res.error_code == "MODEL_RATE_LIMIT"
@@ -29,7 +29,7 @@ def test_api_error_handling(mock_client_class):
     
     agent = AgentOrchestrator(profile_repo=MagicMock())
     
-    res = agent.ask(AgentRequest(query="Hello"))
+    res = agent.ask(AgentRequest(query="Hello"), user_id=1)
     
     assert res.generation_error is True
     assert res.error_code == "API_ERROR"
@@ -46,7 +46,7 @@ def test_malformed_json_response(mock_client_class):
     
     agent = AgentOrchestrator(profile_repo=MagicMock())
     
-    res = agent.ask(AgentRequest(query="Hello"))
+    res = agent.ask(AgentRequest(query="Hello"), user_id=1)
     
     assert res.generation_error is True
     assert res.error_code == "MALFORMED_RESPONSE"
@@ -69,7 +69,7 @@ def test_tool_retry_limit_exceeded(mock_client_class):
     
     agent = AgentOrchestrator(profile_repo=MagicMock())
     
-    res = agent.ask(AgentRequest(query="Hello"))
+    res = agent.ask(AgentRequest(query="Hello"), user_id=1)
     
     assert res.generation_error is True
     assert res.error_code == "TOOL_RETRY_LIMIT_EXCEEDED"

@@ -44,7 +44,7 @@ def test_citation_rejected_if_fake(orchestrator, mocker):
     )
     mock_generate.return_value = call1
     
-    resp = orchestrator.ask(AgentRequest(query="Water?"))
+    resp = orchestrator.ask(AgentRequest(query="Water?"), user_id=1)
     
     # Since grounded=true but no citations retrieved in this turn, it should fail
     # Actually, if no retrieved docs, it sets grounded to False instead of failing, based on orchestrator logic.
@@ -61,7 +61,7 @@ def test_citation_rejected_if_real_but_not_retrieved(orchestrator, mocker):
     )
     mock_generate.return_value = call1
     
-    resp = orchestrator.ask(AgentRequest(query="Water?"))
+    resp = orchestrator.ask(AgentRequest(query="Water?"), user_id=1)
     assert resp.grounded is False
     assert len(resp.citations) == 0
 
@@ -100,7 +100,7 @@ def test_citation_accepted_if_retrieved(orchestrator, mocker):
     )
     mock_generate.side_effect = [call1, call2]
     
-    resp = orchestrator.ask(AgentRequest(query="Protein?"))
+    resp = orchestrator.ask(AgentRequest(query="Protein?"), user_id=1)
     
     assert resp.generation_error is False
     assert resp.grounded is True
@@ -147,7 +147,7 @@ def test_prompt_injection_in_retrieved_knowledge(orchestrator, mocker):
     )
     mock_generate.side_effect = [call1, call2]
     
-    resp = orchestrator.ask(AgentRequest(query="Tell me a secret"))
+    resp = orchestrator.ask(AgentRequest(query="Tell me a secret"), user_id=1)
     
     # Check that it did not execute arbitrary tools based on retrieved text
     assert len(resp.tool_calls) == 1

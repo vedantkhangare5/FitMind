@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 import { ProfileProvider } from "@/context/ProfileContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 export default function RootLayout({
   children,
@@ -19,9 +20,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ProfileProvider>
-          {children}
-        </ProfileProvider>
+        <AuthProvider>
+          <ProfileProvider>
+            {children}
+          </ProfileProvider>
+        </AuthProvider>
       </body>
     </html>
   );

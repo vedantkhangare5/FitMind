@@ -18,13 +18,19 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
   
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
 
+  if (options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase())) {
+    headers['X-FitMind-CSRF'] = '1';
+  }
+
   const response = await fetch(url, {
+    cache: 'no-store', // Prevent browser caching of authenticated data
     ...options,
+    credentials: 'include',
     headers,
   });
 
@@ -67,6 +73,19 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 }
 
 export const api = {
+  // Auth
+  login: (data: any) => fetchApi<any>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  register: (data: any) => fetchApi<any>('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  logout: () => fetchApi<any>('/api/auth/logout', {
+    method: 'POST',
+  }),
+
   // Profile
   getProfile: () => fetchApi<any>('/api/profile'),
   updateProfile: (data: any) => fetchApi<any>('/api/profile', {

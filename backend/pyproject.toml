@@ -12,6 +12,10 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "chromadb>=0.4.20",
     "google-genai>=0.2.0",
+    "PyJWT>=2.8.0",
+    "bcrypt>=4.0.0",
+    "python-multipart>=0.0.6",
+    "email-validator>=2.3.0",
 ]
 
 # Development dependencies - tools for testing and code quality

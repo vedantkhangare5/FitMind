@@ -6,12 +6,13 @@ Derived metrics are always calculated fresh from calculators.py.
 """
 
 import logging
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, Depends
 
 from app.schemas.fitness import FitnessProfileRequest
 from app.schemas.profile import FitnessProfileResponse, ProfileData, DerivedMetrics
 from app.database import ProfileRepository
 from app.calculators import generate_fitness_summary
+from app.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -51,17 +52,17 @@ def _build_response(profile_dict: dict) -> FitnessProfileResponse:
 
 
 @router.get("", response_model=FitnessProfileResponse)
-def get_profile():
+def get_profile(user_id: int = Depends(get_current_user)):
     """Retrieve the saved profile with freshly calculated derived metrics."""
     repo = _get_repository()
-    profile = repo.get_profile()
+    profile = repo.get_profile(user_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="No fitness profile found.")
     return _build_response(profile)
 
 
 @router.put("", response_model=FitnessProfileResponse)
-def save_profile(request: FitnessProfileRequest):
+def save_profile(request: FitnessProfileRequest, user_id: int = Depends(get_current_user)):
     """
     Create or update the fitness profile (upsert).
     
@@ -70,6 +71,7 @@ def save_profile(request: FitnessProfileRequest):
     """
     repo = _get_repository()
     saved = repo.save_profile(
+        user_id=user_id,
         age=request.age,
         sex=request.sex,
         height_cm=request.height_cm,
@@ -82,10 +84,10 @@ def save_profile(request: FitnessProfileRequest):
 
 
 @router.delete("", status_code=204)
-def delete_profile():
+def delete_profile(user_id: int = Depends(get_current_user)):
     """Delete/reset the fitness profile."""
     repo = _get_repository()
-    deleted = repo.delete_profile()
+    deleted = repo.delete_profile(user_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="No fitness profile found to delete.")
     return Response(status_code=204)

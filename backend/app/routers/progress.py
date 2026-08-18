@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from app.schemas.progress import ProgressEntry, ProgressEntryCreate, ProgressSummary, ProgressHistoryResponse
 from app.database import ProgressRepository, ProfileRepository
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/progress", tags=["progress"])
 
@@ -16,34 +17,37 @@ def get_profile_repo():
 @router.get("", response_model=ProgressHistoryResponse)
 def get_progress_history(
     progress_repo: ProgressRepository = Depends(get_progress_repo),
-    profile_repo: ProfileRepository = Depends(get_profile_repo)
+    profile_repo: ProfileRepository = Depends(get_profile_repo),
+    user_id: int = Depends(get_current_user)
 ):
     """
     Retrieve the full progress history and the deterministic summary.
     """
-    entries = progress_repo.get_history()
-    profile = profile_repo.get_profile()
+    entries = progress_repo.get_history(user_id)
+    profile = profile_repo.get_profile(user_id)
     goal = profile["goal"] if profile else None
-    summary = progress_repo.get_summary(goal=goal)
+    summary = progress_repo.get_summary(user_id, goal=goal)
     
     return ProgressHistoryResponse(entries=entries, summary=summary)
 
 @router.get("/summary", response_model=ProgressSummary)
 def get_progress_summary(
     progress_repo: ProgressRepository = Depends(get_progress_repo),
-    profile_repo: ProfileRepository = Depends(get_profile_repo)
+    profile_repo: ProfileRepository = Depends(get_profile_repo),
+    user_id: int = Depends(get_current_user)
 ):
     """
     Retrieve only the deterministic summary. Useful for the agent.
     """
-    profile = profile_repo.get_profile()
+    profile = profile_repo.get_profile(user_id)
     goal = profile["goal"] if profile else None
-    return progress_repo.get_summary(goal=goal)
+    return progress_repo.get_summary(user_id, goal=goal)
 
 @router.post("", response_model=ProgressEntry)
 def add_progress_entry(
     entry: ProgressEntryCreate,
-    progress_repo: ProgressRepository = Depends(get_progress_repo)
+    progress_repo: ProgressRepository = Depends(get_progress_repo),
+    user_id: int = Depends(get_current_user)
 ):
     """
     Add a new progress entry.
@@ -61,18 +65,19 @@ def add_progress_entry(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid ISO-8601 timestamp.")
 
-    new_entry = progress_repo.add_entry(entry.weight_kg, recorded_at)
+    new_entry = progress_repo.add_entry(user_id, entry.weight_kg, recorded_at)
     return new_entry
 
 @router.delete("/{entry_id}")
 def delete_progress_entry(
     entry_id: int,
-    progress_repo: ProgressRepository = Depends(get_progress_repo)
+    progress_repo: ProgressRepository = Depends(get_progress_repo),
+    user_id: int = Depends(get_current_user)
 ):
     """
     Delete a progress entry by ID.
     """
-    deleted = progress_repo.delete_entry(entry_id)
+    deleted = progress_repo.delete_entry(user_id, entry_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Entry not found.")
     return {"message": "Entry deleted successfully"}

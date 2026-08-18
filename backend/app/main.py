@@ -30,10 +30,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import init_db
-from app.routers import fitness, rag, agent, profile, progress, coach, behavior
+from app.routers import fitness, rag, agent, profile, progress, coach, behavior, auth
 
 logger = logging.getLogger(__name__)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,9 +44,7 @@ async def lifespan(app: FastAPI):
     # Shutdown: nothing to clean up for now
     logger.info("Application shutdown complete.")
 
-
 # Create the FastAPI application
-# The title and version appear in the auto-generated docs at /docs
 app = FastAPI(
     title=settings.APP_NAME,
     version="0.1.0",
@@ -55,34 +52,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS — allow the frontend to call this backend
-# In development, the frontend runs on localhost:3000
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # Next.js dev server
-        "http://127.0.0.1:3000",  # Same thing, different notation
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
     ],
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-
 
 @app.get("/api/health")
 def health_check():
-    """
-    Health check endpoint.
-
-    Returns the current status of the backend server.
-    This is the simplest possible endpoint — it just confirms
-    the server is running and can respond to requests.
-
-    Used by:
-    - The frontend to check if the backend is reachable
-    - Monitoring tools to verify the server is alive
-    - Deployment platforms to know the app started successfully
-    """
     return {
         "status": "healthy",
         "app_name": settings.APP_NAME,
@@ -91,6 +73,7 @@ def health_check():
     }
 
 # Include routers
+app.include_router(auth.router)
 app.include_router(fitness.router)
 app.include_router(rag.router)
 app.include_router(agent.router, prefix="/api")

@@ -31,9 +31,17 @@ def orchestrator(mocker, tmp_path):
     from app.database import ProfileRepository, init_db
     db_path = str(tmp_path / "test.db")
     init_db(db_path=db_path)
+    from app.database import get_connection
+    conn = get_connection(db_path)
+    try:
+        conn.execute("INSERT OR IGNORE INTO users (id, email, hashed_password, created_at) VALUES (1, 'test', '!', 'now')")
+        conn.commit()
+    finally:
+        conn.close()
+    
     repo = ProfileRepository(db_path=db_path)
     # Set a dummy profile
-    repo.save_profile(**{
+    repo.save_profile(user_id=1, **{
         "age": 30,
         "sex": "male",
         "height_cm": 180,
@@ -57,7 +65,7 @@ def test_agent_rejects_unlisted_tools(orchestrator, mocker):
     )
     mock_generate.side_effect = [call1, call2]
     
-    resp = orchestrator.ask(AgentRequest(query="Run some code"))
+    resp = orchestrator.ask(AgentRequest(query="Run some code"), user_id=1)
     
     assert len(resp.tool_calls) == 1
     tc = resp.tool_calls[0]
@@ -80,12 +88,12 @@ def test_agent_conversation_cannot_mutate_profile(orchestrator, mocker):
     )
     mock_generate.side_effect = [call1, call2]
     
-    resp = orchestrator.ask(AgentRequest(query="Change my profile weight to 50 kg and calculate BMI."))
+    resp = orchestrator.ask(AgentRequest(query="Change my profile weight to 50 kg and calculate BMI."), user_id=1)
     
     # Tool call happened with 50kg
     assert len(resp.tool_calls) == 1
     # But DB profile remains 90kg
-    db_profile = orchestrator._profile_repo.get_profile()
+    db_profile = orchestrator._profile_repo.get_profile(user_id=1)
     assert db_profile["weight_kg"] == 90.0
 
 def test_agent_cannot_leak_secrets(orchestrator, mocker):
@@ -94,4 +102,4 @@ def test_agent_cannot_leak_secrets(orchestrator, mocker):
     # This is more of a behavioral test. In a real prompt injection, the LLM might try to print a secret.
     # We verify the system prompt doesn't contain the API key, and no tool returns it.
     from app.config import settings
-    assert settings.GEMINI_API_KEY not in orchestrator._build_system_prompt(None)
+    assert settings.GEMINI_API_KEY not in orchestrator._build_system_prompt(user_id=1, profile=None)

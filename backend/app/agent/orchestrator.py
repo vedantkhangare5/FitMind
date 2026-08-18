@@ -88,7 +88,7 @@ class AgentOrchestrator:
         self._profile_repo = profile_repo or ProfileRepository()
         self.mode = mode
 
-    def _build_system_prompt(self, profile: Optional[dict]) -> str:
+    def _build_system_prompt(self, profile: Optional[dict], user_id: int) -> str:
         """Builds the system prompt, optionally augmented with profile context."""
         base_prompt = BASE_SYSTEM_PROMPT if self.mode == "chat" else COACHING_SYSTEM_PROMPT
         if profile is None:
@@ -104,7 +104,7 @@ class AgentOrchestrator:
         )
         
         if self.mode == "coach":
-            progress_summary = ProgressRepository().get_summary(goal=profile["goal"])
+            progress_summary = ProgressRepository().get_summary(user_id, goal=profile["goal"])
             prompt += f"\n\nThe user's deterministic progress summary is: {json.dumps(progress_summary)}"
             
             bmr = calculate_bmr(
@@ -117,6 +117,7 @@ class AgentOrchestrator:
             target_calories = calculate_calorie_target(tdee, profile["goal"])
             target_protein, _ = calculate_protein_target(profile["weight_kg"], profile["goal"])
             behavior_summary = BehaviorRepository().get_summary(
+                user_id,
                 target_calories=target_calories,
                 target_protein=target_protein
             )
@@ -149,12 +150,12 @@ class AgentOrchestrator:
         
         return resolved
 
-    def ask(self, request: AgentRequest | CoachRequest) -> AgentResponse | CoachResponse:
+    def ask(self, request: AgentRequest | CoachRequest, user_id: int) -> AgentResponse | CoachResponse:
         start_time = time.time()
         # Load profile at the start of each request
-        profile = self._profile_repo.get_profile()
+        profile = self._profile_repo.get_profile(user_id)
         profile_used = profile is not None
-        system_prompt = self._build_system_prompt(profile)
+        system_prompt = self._build_system_prompt(profile, user_id)
         
         if profile_used:
             logger.info("Profile loaded for agent request.")
@@ -185,6 +186,8 @@ class AgentOrchestrator:
                         # Pass tool declarations wrapped in Tool object
                         tools=[types.Tool(function_declarations=tool_declarations)],
                         temperature=0.0,
+                        response_mime_type="application/json",
+                        response_schema=AgentLLMResponse if self.mode == "chat" else CoachLLMResponse,
                     )
                 )
             except APIError as e:
@@ -220,6 +223,9 @@ class AgentOrchestrator:
 
                     # Resolve missing args from saved profile
                     args = self._resolve_tool_args(name, dict(args), profile)
+                    
+                    # Inject authenticated user_id to prevent IDOR (LLM cannot override)
+                    args["user_id"] = user_id
 
                     logger.info(f"Executing tool: {name}")
                     tool_start = time.time()
@@ -355,7 +361,7 @@ class AgentOrchestrator:
                             activity_level=profile["activity_level"],
                             goal=profile["goal"]
                         )
-                        progress = ProgressRepository().get_summary(goal=profile["goal"])
+                        progress = ProgressRepository().get_summary(user_id, goal=profile["goal"])
                         
                         bmr = calculate_bmr(
                             weight_kg=profile["weight_kg"],
@@ -367,6 +373,7 @@ class AgentOrchestrator:
                         target_calories = calculate_calorie_target(tdee, profile["goal"])
                         target_protein, _ = calculate_protein_target(profile["weight_kg"], profile["goal"])
                         behavior = BehaviorRepository().get_summary(
+                            user_id,
                             target_calories=target_calories,
                             target_protein=target_protein
                         )

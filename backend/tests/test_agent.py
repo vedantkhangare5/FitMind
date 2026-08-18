@@ -30,7 +30,7 @@ def orchestrator(mocker, tmp_path):
     # Mock genai.Client
     mock_client = MagicMock()
     mocker.patch("app.agent.orchestrator.genai.Client", return_value=mock_client)
-    # Provide an initialized in-memory profile DB so orchestrator.ask() works
+    # Provide an initialized in-memory profile DB so orchestrator.ask(, user_id=1) works
     from app.database import ProfileRepository, init_db
     db_path = str(tmp_path / "test.db")
     init_db(db_path=db_path)
@@ -44,7 +44,7 @@ def test_no_tool_response(orchestrator, mocker):
         text='{"answer": "Hello", "citations": [], "grounded": false, "insufficient_context": false}'
     )
     
-    resp = orchestrator.ask(AgentRequest(query="Hi"))
+    resp = orchestrator.ask(AgentRequest(query="Hi"), user_id=1)
     
     assert resp.answer == "Hello"
     assert resp.grounded is False
@@ -63,7 +63,7 @@ def test_single_tool_call(orchestrator, mocker):
     )
     mock_generate.side_effect = [call1, call2]
     
-    resp = orchestrator.ask(AgentRequest(query="What is my BMI?"))
+    resp = orchestrator.ask(AgentRequest(query="What is my BMI?"), user_id=1)
     
     assert resp.answer == "Your BMI is 22.9."
     assert len(resp.tool_calls) == 1
@@ -85,7 +85,7 @@ def test_multiple_independent_tool_calls(orchestrator, mocker):
     )
     mock_generate.side_effect = [call1, call2]
     
-    resp = orchestrator.ask(AgentRequest(query="What is my BMI and BMR?"))
+    resp = orchestrator.ask(AgentRequest(query="What is my BMI and BMR?"), user_id=1)
     
     assert len(resp.tool_calls) == 2
     assert {tc.tool_name for tc in resp.tool_calls} == {"calculate_bmi", "calculate_bmr"}
@@ -99,7 +99,7 @@ def test_tool_retry_limit_exceeded(orchestrator, mocker):
     # It just loops. After 3 tries (retries per call = 2, so 3 total attempts for the same tool erroring out in a row), it should break.
     mock_generate.side_effect = [call1, call1, call1, call1]
     
-    resp = orchestrator.ask(AgentRequest(query="My BMI?"))
+    resp = orchestrator.ask(AgentRequest(query="My BMI?"), user_id=1)
     
     assert resp.generation_error is True
     assert resp.error_code == "TOOL_RETRY_LIMIT_EXCEEDED"
@@ -115,7 +115,7 @@ def test_max_iterations_exceeded(orchestrator, mocker):
     
     # Wait, MAX_TOOL_CALLS is 5. So it will hit MAX_TOOL_CALLS_EXCEEDED first.
     # Let's change the orchestrator's MAX_TOOL_CALLS temporarily for this test or just expect that error.
-    resp = orchestrator.ask(AgentRequest(query="Loop"))
+    resp = orchestrator.ask(AgentRequest(query="Loop"), user_id=1)
     
     assert resp.generation_error is True
     assert resp.error_code == "MAX_TOOL_CALLS_EXCEEDED"
@@ -157,7 +157,7 @@ def test_citation_validation_failure(orchestrator, mocker):
     )
     mock_generate.side_effect = [call1, call2]
     
-    resp = orchestrator.ask(AgentRequest(query="Protein?"))
+    resp = orchestrator.ask(AgentRequest(query="Protein?"), user_id=1)
     
     assert resp.generation_error is True
     assert resp.error_code == "CITATION_VALIDATION_FAILED"
@@ -196,7 +196,7 @@ def test_valid_citation(orchestrator, mocker):
     )
     mock_generate.side_effect = [call1, call2]
     
-    resp = orchestrator.ask(AgentRequest(query="Protein?"))
+    resp = orchestrator.ask(AgentRequest(query="Protein?"), user_id=1)
     
     assert resp.generation_error is False
     assert resp.error_code is None
@@ -209,7 +209,7 @@ def test_malformed_json(orchestrator, mocker):
         text='{"answer": "Unclosed JSON'
     )
     
-    resp = orchestrator.ask(AgentRequest(query="Hi"))
+    resp = orchestrator.ask(AgentRequest(query="Hi"), user_id=1)
     
     assert resp.generation_error is True
     assert resp.error_code == "MALFORMED_RESPONSE"
@@ -220,7 +220,7 @@ def test_api_error(orchestrator, mocker):
     error.code = 429
     mock_generate.side_effect = error
     
-    resp = orchestrator.ask(AgentRequest(query="Hi"))
+    resp = orchestrator.ask(AgentRequest(query="Hi"), user_id=1)
     
     assert resp.generation_error is True
     assert resp.error_code == "MODEL_RATE_LIMIT"
@@ -239,7 +239,7 @@ def test_tool_call_result_exposed_safely(orchestrator, mocker):
     )
     mock_generate.side_effect = [call1, call2]
     
-    resp = orchestrator.ask(AgentRequest(query="Calculate my TDEE and protein"))
+    resp = orchestrator.ask(AgentRequest(query="Calculate my TDEE and protein"), user_id=1)
     
     assert len(resp.tool_calls) == 2
     tdee_call = resp.tool_calls[0]
@@ -270,7 +270,7 @@ def test_tool_call_error_exposed_without_args(orchestrator, mocker):
     )
     mock_generate.side_effect = [call1, call2]
     
-    resp = orchestrator.ask(AgentRequest(query="Calculate my TDEE"))
+    resp = orchestrator.ask(AgentRequest(query="Calculate my TDEE"), user_id=1)
     
     assert len(resp.tool_calls) == 1
     tdee_call = resp.tool_calls[0]

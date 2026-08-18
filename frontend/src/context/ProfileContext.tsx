@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 type ProfileData = {
   age: number;
@@ -43,6 +44,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { setAuthStatus, isAuthenticated } = useAuth();
+
+
 
   const refreshProfile = async () => {
     try {
@@ -50,13 +54,20 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       setError(null);
       const data = await api.getProfile();
       setProfileData(data);
+      setAuthStatus(true);
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 404) {
-            setProfileData(null);
-            setError(null);
+        if (err.status === 401) {
+          setAuthStatus(false);
+          setProfileData(null);
+          setError(null);
+        } else if (err.status === 404) {
+          setAuthStatus(true);
+          setProfileData(null);
+          setError(null);
         } else {
-            setError(err.message);
+          setAuthStatus(true); // Assuming server error, keep session if they had one? Actually, we don't know. Let's just set error.
+          setError(err.message);
         }
       } else {
         setError(err instanceof Error ? err.message : "Failed to load profile");
@@ -93,9 +104,20 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setTimeout(() => setProfileData(null), 0);
+    } else if (isAuthenticated && !profileData && !loading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      refreshProfile();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   return (
     <ProfileContext.Provider

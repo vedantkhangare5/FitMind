@@ -14,17 +14,23 @@ def setup_teardown_db():
     os.environ["FITMIND_DB_PATH"] = db_path
     
     # Initialize DB
+    from app.database import init_db
+    init_db(db_path)
     conn = get_connection(db_path)
-    conn.execute(CREATE_PROFILE_TABLE)
-    conn.execute(CREATE_PROGRESS_TABLE)
+    conn.execute("INSERT OR IGNORE INTO users (id, email, hashed_password, created_at) VALUES (1, 'test', '!', 'now')")
     conn.commit()
     conn.close()
     
     yield
     
     # Teardown
-    if os.path.exists(db_path):
-        os.remove(db_path)
+    for suffix in ["", "-wal", "-shm"]:
+        p = db_path + suffix
+        if os.path.exists(p):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
 
 def test_add_progress_entry():
     response = client.post("/api/progress", json={"weight_kg": 90.5})

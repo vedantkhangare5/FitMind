@@ -8,6 +8,7 @@ from app.schemas.behavior import (
 )
 from app.database import BehaviorRepository, ProfileRepository
 from app.calculators import calculate_bmr, calculate_tdee, calculate_calorie_target, calculate_protein_target
+from app.auth import get_current_user
 import logging
 
 router = APIRouter(prefix="/api/behavior", tags=["Behavior"])
@@ -20,30 +21,30 @@ def get_profile_repo():
     return ProfileRepository()
 
 @router.post("/nutrition", response_model=NutritionLogResponse)
-def log_nutrition(log: NutritionLogCreate, repo: BehaviorRepository = Depends(get_behavior_repo)):
-    return repo.log_nutrition(log.date, log.calories, log.protein_grams)
+def log_nutrition(log: NutritionLogCreate, repo: BehaviorRepository = Depends(get_behavior_repo), user_id: int = Depends(get_current_user)):
+    return repo.log_nutrition(user_id, log.date, log.calories, log.protein_grams)
 
 @router.get("/nutrition", response_model=List[NutritionLogResponse])
-def get_nutrition_logs(limit: int = 30, repo: BehaviorRepository = Depends(get_behavior_repo)):
-    return repo.get_nutrition_logs(limit=limit)
+def get_nutrition_logs(limit: int = 30, repo: BehaviorRepository = Depends(get_behavior_repo), user_id: int = Depends(get_current_user)):
+    return repo.get_nutrition_logs(user_id, limit=limit)
 
 @router.delete("/nutrition/{date}")
-def delete_nutrition_log(date: str, repo: BehaviorRepository = Depends(get_behavior_repo)):
-    if not repo.delete_nutrition_log(date):
+def delete_nutrition_log(date: str, repo: BehaviorRepository = Depends(get_behavior_repo), user_id: int = Depends(get_current_user)):
+    if not repo.delete_nutrition_log(user_id, date):
         raise HTTPException(status_code=404, detail="Nutrition log not found")
     return {"status": "deleted"}
 
 @router.post("/workouts", response_model=WorkoutLogResponse)
-def log_workout(log: WorkoutLogCreate, repo: BehaviorRepository = Depends(get_behavior_repo)):
-    return repo.log_workout(log.date, log.workout_type, log.duration_minutes, log.completed)
+def log_workout(log: WorkoutLogCreate, repo: BehaviorRepository = Depends(get_behavior_repo), user_id: int = Depends(get_current_user)):
+    return repo.log_workout(user_id, log.date, log.workout_type, log.duration_minutes, log.completed)
 
 @router.get("/workouts", response_model=List[WorkoutLogResponse])
-def get_workout_logs(limit: int = 30, repo: BehaviorRepository = Depends(get_behavior_repo)):
-    return repo.get_workout_logs(limit=limit)
+def get_workout_logs(limit: int = 30, repo: BehaviorRepository = Depends(get_behavior_repo), user_id: int = Depends(get_current_user)):
+    return repo.get_workout_logs(user_id, limit=limit)
 
 @router.delete("/workouts/{log_id}")
-def delete_workout_log(log_id: int, repo: BehaviorRepository = Depends(get_behavior_repo)):
-    if not repo.delete_workout_log(log_id):
+def delete_workout_log(log_id: int, repo: BehaviorRepository = Depends(get_behavior_repo), user_id: int = Depends(get_current_user)):
+    if not repo.delete_workout_log(user_id, log_id):
         raise HTTPException(status_code=404, detail="Workout log not found")
     return {"status": "deleted"}
 
@@ -51,9 +52,10 @@ def delete_workout_log(log_id: int, repo: BehaviorRepository = Depends(get_behav
 def get_behavior_summary(
     today: Optional[str] = None,
     repo: BehaviorRepository = Depends(get_behavior_repo),
-    profile_repo: ProfileRepository = Depends(get_profile_repo)
+    profile_repo: ProfileRepository = Depends(get_profile_repo),
+    user_id: int = Depends(get_current_user)
 ):
-    profile = profile_repo.get_profile()
+    profile = profile_repo.get_profile(user_id)
     target_calories = None
     target_protein = None
     target_workouts = None
@@ -71,6 +73,7 @@ def get_behavior_summary(
         target_protein = protein_min
     
     return repo.get_summary(
+        user_id,
         today=today,
         target_calories=target_calories,
         target_protein=target_protein,

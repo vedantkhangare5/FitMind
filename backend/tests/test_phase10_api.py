@@ -23,7 +23,7 @@ def test_api_extra_fields_ignored():
     # We mock the orchestrator to avoid hitting gemini
     with pytest.MonkeyPatch.context() as m:
         class MockOrchestrator:
-            def ask(self, req):
+            def ask(self, req, user_id: int):
                 from app.schemas.agent import AgentResponse
                 return AgentResponse(
                     answer="mock", citations=[], tool_calls=[], grounded=False, 
@@ -72,7 +72,7 @@ def test_error_response_does_not_leak_stack_trace():
     # Simulate internal error
     with pytest.MonkeyPatch.context() as m:
         class MockOrchestrator:
-            def ask(self, req):
+            def ask(self, req, user_id: int):
                 raise Exception("Super secret internal error message")
         m.setattr("app.routers.agent.AgentOrchestrator", MockOrchestrator)
         

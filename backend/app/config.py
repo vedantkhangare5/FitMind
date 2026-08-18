@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # Gemini API key — not needed until Phase 3, so it has a default
     GEMINI_API_KEY: str = "not-set-yet"
 
+    # JWT configuration
+    JWT_SECRET: str = "local-insecure-secret" # In prod, override via .env
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
     # Tell pydantic-settings to read from .env and .env.local (local overrides)
     # Files listed later take higher priority, so .env.local overrides .env
     model_config = SettingsConfigDict(

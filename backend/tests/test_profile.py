@@ -32,9 +32,24 @@ def in_memory_repo():
     tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
     tmp.close()
     init_db(db_path=tmp.name)
+    from app.database import get_connection
+    conn = get_connection(tmp.name)
+    try:
+        conn.execute("INSERT OR IGNORE INTO users (id, email, hashed_password, created_at) VALUES (1, 'test', '!', 'now')")
+        conn.commit()
+    finally:
+        conn.close()
+    
     repo = ProfileRepository(db_path=tmp.name)
     yield repo
-    os.unlink(tmp.name)
+    
+    for suffix in ["", "-wal", "-shm"]:
+        p = tmp.name + suffix
+        if os.path.exists(p):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
 
 
 @pytest.fixture
@@ -237,7 +252,7 @@ class TestAgentProfileIntegration:
         return agent
 
     def test_profile_used_flag_when_profile_exists(self, mocker, in_memory_repo):
-        in_memory_repo.save_profile(**VALID_PROFILE)
+        in_memory_repo.save_profile(user_id=1, **VALID_PROFILE)
         agent = self._make_orchestrator(mocker, in_memory_repo)
         
         mock_generate = agent.client.models.generate_content
@@ -246,7 +261,7 @@ class TestAgentProfileIntegration:
         )
         
         from app.schemas.agent import AgentRequest
-        resp = agent.ask(AgentRequest(query="Hi"))
+        resp = agent.ask(AgentRequest(query="Hi"), user_id=1)
         
         assert resp.profile_used is True
 
@@ -259,12 +274,12 @@ class TestAgentProfileIntegration:
         )
         
         from app.schemas.agent import AgentRequest
-        resp = agent.ask(AgentRequest(query="Hi"))
+        resp = agent.ask(AgentRequest(query="Hi"), user_id=1)
         
         assert resp.profile_used is False
 
     def test_system_prompt_contains_profile_when_exists(self, mocker, in_memory_repo):
-        in_memory_repo.save_profile(**VALID_PROFILE)
+        in_memory_repo.save_profile(user_id=1, **VALID_PROFILE)
         agent = self._make_orchestrator(mocker, in_memory_repo)
         
         mock_generate = agent.client.models.generate_content
@@ -273,7 +288,7 @@ class TestAgentProfileIntegration:
         )
         
         from app.schemas.agent import AgentRequest
-        agent.ask(AgentRequest(query="How many calories should I eat?"))
+        agent.ask(AgentRequest(query="How many calories should I eat?"), user_id=1)
         
         # Check the system_instruction passed to generate_content
         call_args = mock_generate.call_args
@@ -292,7 +307,7 @@ class TestAgentProfileIntegration:
         )
         
         from app.schemas.agent import AgentRequest
-        agent.ask(AgentRequest(query="Hi"))
+        agent.ask(AgentRequest(query="Hi"), user_id=1)
         
         call_args = mock_generate.call_args
         config = call_args.kwargs.get("config") or call_args[1].get("config")
@@ -301,26 +316,26 @@ class TestAgentProfileIntegration:
 
     def test_tool_args_resolved_from_profile(self, mocker, in_memory_repo):
         """When Gemini omits args, they are resolved from the saved profile."""
-        in_memory_repo.save_profile(**VALID_PROFILE)
+        in_memory_repo.save_profile(user_id=1, **VALID_PROFILE)
         agent = self._make_orchestrator(mocker, in_memory_repo)
         
         from app.agent.orchestrator import TOOL_PROFILE_FIELDS
         # Simulate: Gemini calls calculate_bmi without providing args
         result = agent._resolve_tool_args(
             "calculate_bmi", {}, 
-            in_memory_repo.get_profile()
+            in_memory_repo.get_profile(user_id=1)
         )
         assert result["weight_kg"] == 92.0
         assert result["height_cm"] == 181.0
 
     def test_explicit_args_override_profile(self, mocker, in_memory_repo):
         """Explicitly supplied args take priority over profile values."""
-        in_memory_repo.save_profile(**VALID_PROFILE)
+        in_memory_repo.save_profile(user_id=1, **VALID_PROFILE)
         agent = self._make_orchestrator(mocker, in_memory_repo)
         
         result = agent._resolve_tool_args(
             "calculate_bmi", {"weight_kg": 85.0},
-            in_memory_repo.get_profile()
+            in_memory_repo.get_profile(user_id=1)
         )
         assert result["weight_kg"] == 85.0  # Explicit override
         assert result["height_cm"] == 181.0  # From profile
@@ -362,7 +377,7 @@ class TestTemporaryOverrides:
 class TestProfilePrivacy:
     def test_profile_not_in_chromadb(self, in_memory_repo):
         """Profile data must never enter ChromaDB."""
-        in_memory_repo.save_profile(**VALID_PROFILE)
+        in_memory_repo.save_profile(user_id=1, **VALID_PROFILE)
         
         # Import ChromaDB vectorstore and verify no profile data
         try:
@@ -401,11 +416,11 @@ class TestProfilePrivacy:
 
 class TestProfileRepository:
     def test_get_returns_none_when_empty(self, in_memory_repo):
-        assert in_memory_repo.get_profile() is None
+        assert in_memory_repo.get_profile(user_id=1) is None
 
     def test_save_and_get_roundtrip(self, in_memory_repo):
-        in_memory_repo.save_profile(**VALID_PROFILE)
-        profile = in_memory_repo.get_profile()
+        in_memory_repo.save_profile(user_id=1, **VALID_PROFILE)
+        profile = in_memory_repo.get_profile(user_id=1)
         assert profile is not None
         assert profile["age"] == 21
         assert profile["sex"] == "male"
@@ -416,15 +431,15 @@ class TestProfileRepository:
         assert "updated_at" in profile
 
     def test_save_replaces_existing(self, in_memory_repo):
-        in_memory_repo.save_profile(**VALID_PROFILE)
-        in_memory_repo.save_profile(**{**VALID_PROFILE, "weight_kg": 88.0})
-        profile = in_memory_repo.get_profile()
+        in_memory_repo.save_profile(user_id=1, **VALID_PROFILE)
+        in_memory_repo.save_profile(user_id=1, **{**VALID_PROFILE, "weight_kg": 88.0})
+        profile = in_memory_repo.get_profile(user_id=1)
         assert profile["weight_kg"] == 88.0
 
     def test_delete_removes_profile(self, in_memory_repo):
-        in_memory_repo.save_profile(**VALID_PROFILE)
-        assert in_memory_repo.delete_profile() is True
-        assert in_memory_repo.get_profile() is None
+        in_memory_repo.save_profile(user_id=1, **VALID_PROFILE)
+        assert in_memory_repo.delete_profile(user_id=1) is True
+        assert in_memory_repo.get_profile(user_id=1) is None
 
     def test_delete_returns_false_when_empty(self, in_memory_repo):
-        assert in_memory_repo.delete_profile() is False
+        assert in_memory_repo.delete_profile(user_id=1) is False

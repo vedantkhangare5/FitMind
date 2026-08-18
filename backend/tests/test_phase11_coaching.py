@@ -28,7 +28,14 @@ def test_hypothetical_regression(test_profile, tmp_path):
     db_file = str(tmp_path / "test.db")
     repo = ProfileRepository(db_path=db_file)
     init_db(db_path=db_file)
-    repo.save_profile(**test_profile)
+    from app.database import get_connection
+    conn = get_connection(db_file)
+    try:
+        conn.execute("INSERT OR IGNORE INTO users (id, email, hashed_password, created_at) VALUES (1, 'test', '!', 'now')")
+        conn.commit()
+    finally:
+        conn.close()
+    repo.save_profile(user_id=1, **test_profile)
 
     with patch("app.agent.orchestrator.ProgressRepository") as MockProgressRepo, \
          patch("app.agent.orchestrator.BehaviorRepository") as MockBehaviorRepo:
@@ -68,14 +75,14 @@ def test_hypothetical_regression(test_profile, tmp_path):
         chat_orchestrator.client = mock_client
         
         chat_req = AgentRequest(query="What would my TDEE be if I weighed 85 kg?")
-        chat_resp = chat_orchestrator.ask(chat_req)
+        chat_resp = chat_orchestrator.ask(chat_req, user_id=1)
         
         assert chat_resp.generation_error is False
         assert len(chat_resp.tool_calls) == 1
         assert chat_resp.tool_calls[0].tool_name == "calculate_tdee"
         
         # Verify the profile is unchanged
-        saved_profile = repo.get_profile()
+        saved_profile = repo.get_profile(user_id=1)
         assert saved_profile["weight_kg"] == 92
         
         # 2. Ask for a coaching summary
@@ -91,7 +98,7 @@ def test_hypothetical_regression(test_profile, tmp_path):
         coach_orchestrator.client = mock_client_coach
         
         coach_req = CoachRequest(query=None)
-        coach_resp = coach_orchestrator.ask(coach_req)
+        coach_resp = coach_orchestrator.ask(coach_req, user_id=1)
         
         assert coach_resp.generation_error is False
         assert coach_resp.metrics["tdee"] > 0
@@ -103,7 +110,14 @@ def test_coaching_citation_validation(test_profile, tmp_path):
     db_file = str(tmp_path / "test2.db")
     repo = ProfileRepository(db_path=db_file)
     init_db(db_path=db_file)
-    repo.save_profile(**test_profile)
+    from app.database import get_connection
+    conn = get_connection(db_file)
+    try:
+        conn.execute("INSERT OR IGNORE INTO users (id, email, hashed_password, created_at) VALUES (1, 'test', '!', 'now')")
+        conn.commit()
+    finally:
+        conn.close()
+    repo.save_profile(user_id=1, **test_profile)
     
     with patch("app.agent.orchestrator.ProgressRepository") as MockProgressRepo, \
          patch("app.agent.orchestrator.BehaviorRepository") as MockBehaviorRepo:
@@ -124,7 +138,7 @@ def test_coaching_citation_validation(test_profile, tmp_path):
         mock_client.models.generate_content.return_value = mock_response
         orchestrator.client = mock_client
         
-        resp = orchestrator.ask(CoachRequest(query=None))
+        resp = orchestrator.ask(CoachRequest(query=None), user_id=1)
         assert resp.generation_error is True
         assert resp.error_code == "CITATION_VALIDATION_FAILED"
 

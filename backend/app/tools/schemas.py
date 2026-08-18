@@ -41,7 +41,7 @@ class SearchKnowledgeInput(BaseModel):
 
 
 class GetProgressSummaryInput(BaseModel):
-    pass
+    user_id: int
 
 # ==============================================================================
 # GEMINI FUNCTION DECLARATIONS
