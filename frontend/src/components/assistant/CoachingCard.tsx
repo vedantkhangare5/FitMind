@@ -163,7 +163,7 @@ export function CoachingCard() {
               <div className="bg-emerald-600 rounded-3xl p-6 text-white shadow-lg sticky top-6">
                 <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5" />
-                  Today&apos;s Action Plan
+                  Today&apos;s Suggested Actions
                 </h3>
                 <div className="space-y-4">
                   {data.action_plan.map((action, idx) => (
