@@ -43,6 +43,9 @@ class SearchKnowledgeInput(BaseModel):
 class GetProgressSummaryInput(BaseModel):
     user_id: int
 
+class GetBehaviorSummaryInput(BaseModel):
+    user_id: int
+
 # ==============================================================================
 # GEMINI FUNCTION DECLARATIONS
 # ==============================================================================
@@ -137,6 +140,16 @@ search_knowledge_declaration = FunctionDeclaration(
 get_progress_summary_declaration = FunctionDeclaration(
     name="get_progress_summary",
     description="Retrieves the user's historical progress summary (current weight, starting weight, total change, percentage change, and trend). Use this when the user asks about their past progress or weight trend. Do not calculate trends yourself; use this tool.",
+    parameters=Schema(
+        type=Type.OBJECT,
+        properties={},
+        required=[]
+    )
+)
+
+get_behavior_summary_declaration = FunctionDeclaration(
+    name="get_behavior_summary",
+    description="Retrieves the user's 7-day behavior adherence summary, including nutrition (calories, protein) and workout logs. Use this when the user asks about their recent behavior, adherence, or workouts.",
     parameters=Schema(
         type=Type.OBJECT,
         properties={},

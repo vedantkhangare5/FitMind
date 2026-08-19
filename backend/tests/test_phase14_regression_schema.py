@@ -38,7 +38,7 @@ def test_regression_schema_coach_mode(mock_client_class):
     # Mock the LLM returning the CORRECT canonical Coach schema
     mock_response = MagicMock()
     mock_response.function_calls = None
-    mock_response.text = '{"summary": "Coach summary", "current_status": "Doing great", "recommendations": [], "insufficient_context": false}'
+    mock_response.text = '{"summary": "Coach summary", "current_status": "Doing great", "recommendations": [], "action_plan": ["A1", "A2", "A3"], "insufficient_context": false}'
     
     mock_client.models.generate_content.return_value = mock_response
     

@@ -2,7 +2,7 @@ import os
 import json
 import logging
 import time
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from pydantic import ValidationError
 
 from google import genai
@@ -23,6 +23,7 @@ You have access to several tools. Use them to gather necessary information or pe
 If you need to calculate BMI, BMR, TDEE, protein targets, or validate calories, ALWAYS use the provided calculation tools.
 If you need scientific facts or evidence, ALWAYS use the `search_knowledge` tool.
 If the user asks about their weight history, progress, or trends, ALWAYS use the `get_progress_summary` tool.
+If the user asks about their recent nutrition or workout adherence, ALWAYS use the `get_behavior_summary` tool.
 
 CRITICAL INSTRUCTIONS:
 1. When you have gathered all necessary information, provide your final answer strictly in the requested JSON schema.
@@ -48,6 +49,7 @@ CRITICAL INSTRUCTIONS:
    - BUILD_MUSCLE: Explicitly state that weight history alone cannot measure muscle gain, as it cannot distinguish between fat, muscle, and water weight.
 6. Provide your final response matching the strict JSON schema.
 7. Do not provide medical diagnoses or future guarantees.
+8. Your response MUST include exactly 3 actionable, highly specific daily tasks in the `action_plan` array based on the user's current goal and recent adherence.
 """
 
 PROFILE_CONTEXT_TEMPLATE = """
@@ -128,18 +130,12 @@ class AgentOrchestrator:
     def _resolve_tool_args(self, tool_name: str, args: dict, profile: Optional[dict]) -> dict:
         """
         Resolves missing tool arguments from the saved profile.
-        
-        Priority:
-        1. Explicitly supplied args (from Gemini's function call) — always used
-        2. Saved profile values — used for missing args
-        3. If still missing — left missing so ToolRegistry validation catches it
         """
         if profile is None:
             return args
         
         profile_fields = TOOL_PROFILE_FIELDS.get(tool_name)
         if profile_fields is None:
-            # Not a fitness calculation tool (e.g., search_knowledge) — no resolution
             return args
         
         resolved = dict(args)
@@ -150,23 +146,11 @@ class AgentOrchestrator:
         
         return resolved
 
-    def ask(self, request: AgentRequest | CoachRequest, user_id: int) -> AgentResponse | CoachResponse:
-        start_time = time.time()
-        # Load profile at the start of each request
-        profile = self._profile_repo.get_profile(user_id)
-        profile_used = profile is not None
-        system_prompt = self._build_system_prompt(profile, user_id)
-        
-        if profile_used:
-            logger.info("Profile loaded for agent request.")
-        
-        if request.query:
-            contents = [types.Content(role="user", parts=[types.Part.from_text(text=request.query)])]
-        else:
-            contents = [types.Content(role="user", parts=[types.Part.from_text(text="Generate my coaching summary.")])]
+    def _execute_tool_loop(self, contents: List[types.Content], system_prompt: str, user_id: int, profile: Optional[dict], start_time: float) -> Any:
         retrieved_knowledge: Dict[str, RetrievalResult] = {}
         tool_call_records: List[ToolCallRecord] = []
         consecutive_tool_retries: Dict[str, int] = {}
+        profile_used = profile is not None
         
         iteration_count = 0
         total_tool_calls = 0
@@ -183,7 +167,6 @@ class AgentOrchestrator:
                     contents=contents,
                     config=types.GenerateContentConfig(
                         system_instruction=system_prompt,
-                        # Pass tool declarations wrapped in Tool object
                         tools=[types.Tool(function_declarations=tool_declarations)],
                         temperature=0.0,
                         response_mime_type="application/json",
@@ -198,12 +181,9 @@ class AgentOrchestrator:
                 logger.error(f"Unexpected GenerateContent error: {e}")
                 return self._error_response(error_code="INTERNAL_ERROR", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
 
-            # Check if model requested function calls
             if response.function_calls:
-                # Add the model's function_call message to the history
                 contents.append(response.candidates[0].content)
                 
-                # Check global tool call limit
                 total_tool_calls += len(response.function_calls)
                 if total_tool_calls > self.MAX_TOOL_CALLS:
                     logger.warning("Max tool calls exceeded.")
@@ -214,17 +194,13 @@ class AgentOrchestrator:
                     name = call.name
                     args = call.args or {}
                     
-                    # Convert mapping to dict if it's not already
                     if not isinstance(args, dict):
                         try:
                             args = dict(args)
                         except Exception:
                             args = getattr(args, "fields", args)
 
-                    # Resolve missing args from saved profile
                     args = self._resolve_tool_args(name, dict(args), profile)
-                    
-                    # Inject authenticated user_id to prevent IDOR (LLM cannot override)
                     args["user_id"] = user_id
 
                     logger.info(f"Executing tool: {name}")
@@ -232,7 +208,6 @@ class AgentOrchestrator:
                     result_envelope = registry.execute(name, args)
                     tool_duration = int((time.time() - tool_start) * 1000)
                     
-                    # Track retries
                     if not result_envelope["success"]:
                         consecutive_tool_retries[name] = consecutive_tool_retries.get(name, 0) + 1
                         status = "error"
@@ -240,27 +215,22 @@ class AgentOrchestrator:
                         consecutive_tool_retries[name] = 0
                         status = "success"
                         
-                        # Accumulate retrieved knowledge if it was search_knowledge
                         if name == "search_knowledge" and result_envelope["data"]:
                             for doc in result_envelope["data"].get("results", []):
                                 doc_id = doc.get("document_id")
                                 if doc_id:
-                                    # Create RetrievalResult object just to store it uniformly
                                     retrieved_knowledge[doc_id] = RetrievalResult(**doc)
 
-                    # Check retry limits
                     if consecutive_tool_retries.get(name, 0) > self.MAX_TOOL_RETRIES_PER_CALL:
                         logger.warning(f"Tool retry limit exceeded for {name}.")
                         return self._error_response(error_code="TOOL_RETRY_LIMIT_EXCEEDED", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
                         
-                    # Create safe result for frontend (hide huge chunks from search_knowledge)
                     safe_result = result_envelope.copy()
                     if name == "search_knowledge" and safe_result.get("success"):
                         safe_result["data"] = {"message": "Knowledge retrieved successfully"}
                         
                     tool_call_records.append(ToolCallRecord(tool_name=name, status=status, result=safe_result, duration_ms=tool_duration))
                     
-                    # Package the response to send back to the model
                     function_responses.append(
                         types.Part.from_function_response(
                             name=name,
@@ -268,11 +238,9 @@ class AgentOrchestrator:
                         )
                     )
                 
-                # Append all tool results in one turn
                 contents.append(types.Content(role="user", parts=function_responses))
                 continue
                 
-            # If no function calls, the model provided its final JSON text
             if response.text:
                 raw_text = response.text.strip()
                 if raw_text.startswith("```json"):
@@ -281,124 +249,154 @@ class AgentOrchestrator:
                     raw_text = raw_text[3:]
                 if raw_text.endswith("```"):
                     raw_text = raw_text[:-3]
-                raw_text = raw_text.strip()
+                return raw_text.strip(), tool_call_records, retrieved_knowledge
 
-                try:
-                    if self.mode == "chat":
-                        llm_resp = AgentLLMResponse.model_validate_json(raw_text)
-                    else:
-                        llm_resp = CoachLLMResponse.model_validate_json(raw_text)
-                except ValidationError as e:
-                    logger.error(f"Malformed JSON from LLM: {e}")
-                    return self._error_response(error_code="MALFORMED_RESPONSE", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
-
-                # Citation Validation Flow
-                valid_citations: List[Citation] = []
-                
-                # Strip fake citations and hydrate real ones
-                claimed_citations = []
-                if self.mode == "chat":
-                    claimed_citations = llm_resp.citations
-                else:
-                    for rec in llm_resp.recommendations:
-                        claimed_citations.extend(rec.evidence_ids)
-
-                for doc_id in claimed_citations:
-                    if doc_id in retrieved_knowledge:
-                        if not any(c.document_id == doc_id for c in valid_citations):
-                            r = retrieved_knowledge[doc_id]
-                            valid_citations.append(
-                                Citation(
-                                    document_id=r.document_id,
-                                    title=r.title,
-                                    source_name=r.source_name,
-                                    source_url=r.source_url,
-                                    section=r.section,
-                                    page=r.page,
-                                    text_type=r.text_type
-                                )
-                            )
-
-                # Distinct Error: Claimed grounded on knowledge docs but provided no valid citations
-                if self.mode == "chat":
-                    grounded = llm_resp.grounded
-                    if grounded:
-                        if len(valid_citations) == 0:
-                            if len(retrieved_knowledge) > 0:
-                                logger.warning("Citation validation failed. Grounded=true with retrieved docs but 0 valid citations.")
-                                return self._error_response(error_code="CITATION_VALIDATION_FAILED", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
-                            else:
-                                grounded = False
-                else:
-                    grounded = False
-                    has_evidence_ids = any(len(rec.evidence_ids) > 0 for rec in llm_resp.recommendations)
-                    if has_evidence_ids and len(valid_citations) == 0:
-                        logger.warning("Citation validation failed. Recommendations claimed evidence but 0 valid citations provided.")
-                        return self._error_response(error_code="CITATION_VALIDATION_FAILED", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
-
-                if self.mode == "chat":
-                    return AgentResponse(
-                        answer=llm_resp.answer,
-                        citations=valid_citations,
-                        tool_calls=tool_call_records,
-                        grounded=grounded,
-                        insufficient_context=llm_resp.insufficient_context,
-                        generation_error=False,
-                        error_code=None,
-                        profile_used=profile_used,
-                        total_duration_ms=int((time.time() - start_time) * 1000)
-                    )
-                else:
-                    metrics = {}
-                    progress = {}
-                    behavior = {}
-                    if profile:
-                        metrics = generate_fitness_summary(
-                            age=profile["age"],
-                            sex=profile["sex"],
-                            height_cm=profile["height_cm"],
-                            weight_kg=profile["weight_kg"],
-                            activity_level=profile["activity_level"],
-                            goal=profile["goal"]
-                        )
-                        progress = ProgressRepository().get_summary(user_id, goal=profile["goal"])
-                        
-                        bmr = calculate_bmr(
-                            weight_kg=profile["weight_kg"],
-                            height_cm=profile["height_cm"],
-                            age=profile["age"],
-                            sex=profile["sex"]
-                        )
-                        tdee = calculate_tdee(bmr, profile["activity_level"])
-                        target_calories = calculate_calorie_target(tdee, profile["goal"])
-                        target_protein, _ = calculate_protein_target(profile["weight_kg"], profile["goal"])
-                        behavior = BehaviorRepository().get_summary(
-                            user_id,
-                            target_calories=target_calories,
-                            target_protein=target_protein
-                        )
-                        
-                    return CoachResponse(
-                        summary=llm_resp.summary,
-                        current_status=llm_resp.current_status,
-                        recommendations=llm_resp.recommendations,
-                        metrics=metrics,
-                        progress=progress,
-                        behavior=behavior,
-                        citations=valid_citations,
-                        tool_calls=tool_call_records,
-                        generation_error=False,
-                        error_code=None,
-                        profile_used=profile_used,
-                        total_duration_ms=int((time.time() - start_time) * 1000)
-                    )
-
-            # If response text is unexpectedly empty and no function calls
             return self._error_response(error_code="MALFORMED_RESPONSE", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
             
-        # End of while loop - max iterations exceeded
         logger.warning("Max iterations exceeded.")
         return self._error_response(error_code="MAX_ITERATIONS_EXCEEDED", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
+
+    def _validate_citations(self, claimed_citations: List[str], retrieved_knowledge: Dict[str, RetrievalResult]) -> List[Citation]:
+        valid_citations: List[Citation] = []
+        for doc_id in claimed_citations:
+            if doc_id in retrieved_knowledge:
+                if not any(c.document_id == doc_id for c in valid_citations):
+                    r = retrieved_knowledge[doc_id]
+                    valid_citations.append(
+                        Citation(
+                            document_id=r.document_id,
+                            title=r.title,
+                            source_name=r.source_name,
+                            source_url=r.source_url,
+                            section=r.section,
+                            page=r.page,
+                            text_type=r.text_type
+                        )
+                    )
+        return valid_citations
+
+    def _handle_chat_response(self, raw_text: str, tool_call_records: List[ToolCallRecord], retrieved_knowledge: Dict[str, RetrievalResult], profile_used: bool, start_time: float) -> AgentResponse:
+        try:
+            llm_resp = AgentLLMResponse.model_validate_json(raw_text)
+        except ValidationError as e:
+            logger.error(f"Malformed JSON from LLM: {e}")
+            return self._error_response(error_code="MALFORMED_RESPONSE", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
+
+        valid_citations = self._validate_citations(llm_resp.citations, retrieved_knowledge)
+
+        grounded = llm_resp.grounded
+        if grounded:
+            if len(valid_citations) == 0:
+                if len(retrieved_knowledge) > 0:
+                    logger.warning("Citation validation failed. Grounded=true with retrieved docs but 0 valid citations.")
+                    return self._error_response(error_code="CITATION_VALIDATION_FAILED", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
+                else:
+                    grounded = False
+
+        return AgentResponse(
+            answer=llm_resp.answer,
+            citations=valid_citations,
+            tool_calls=tool_call_records,
+            grounded=grounded,
+            insufficient_context=llm_resp.insufficient_context,
+            generation_error=False,
+            error_code=None,
+            profile_used=profile_used,
+            total_duration_ms=int((time.time() - start_time) * 1000)
+        )
+
+    def _handle_coach_response(self, raw_text: str, tool_call_records: List[ToolCallRecord], retrieved_knowledge: Dict[str, RetrievalResult], profile: Optional[dict], user_id: int, profile_used: bool, start_time: float) -> CoachResponse:
+        try:
+            llm_resp = CoachLLMResponse.model_validate_json(raw_text)
+        except ValidationError as e:
+            logger.error(f"Malformed JSON from LLM: {e}")
+            return self._error_response(error_code="MALFORMED_RESPONSE", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
+
+        claimed_citations = []
+        for rec in llm_resp.recommendations:
+            claimed_citations.extend(rec.evidence_ids)
+            
+        valid_citations = self._validate_citations(claimed_citations, retrieved_knowledge)
+
+        has_evidence_ids = any(len(rec.evidence_ids) > 0 for rec in llm_resp.recommendations)
+        if has_evidence_ids and len(valid_citations) == 0:
+            logger.warning("Citation validation failed. Recommendations claimed evidence but 0 valid citations provided.")
+            return self._error_response(error_code="CITATION_VALIDATION_FAILED", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
+
+        # Enforce action_plan length strictly
+        if not hasattr(llm_resp, "action_plan") or len(llm_resp.action_plan) != 3:
+            logger.warning(f"Coach validation failed. Expected exactly 3 action items.")
+            return self._error_response(error_code="MALFORMED_RESPONSE", generation_error=True, profile_used=profile_used, total_duration_ms=int((time.time() - start_time) * 1000))
+
+        metrics = {}
+        progress = {}
+        behavior = {}
+        if profile:
+            metrics = generate_fitness_summary(
+                age=profile["age"],
+                sex=profile["sex"],
+                height_cm=profile["height_cm"],
+                weight_kg=profile["weight_kg"],
+                activity_level=profile["activity_level"],
+                goal=profile["goal"]
+            )
+            progress = ProgressRepository().get_summary(user_id, goal=profile["goal"])
+            
+            bmr = calculate_bmr(
+                weight_kg=profile["weight_kg"],
+                height_cm=profile["height_cm"],
+                age=profile["age"],
+                sex=profile["sex"]
+            )
+            tdee = calculate_tdee(bmr, profile["activity_level"])
+            target_calories = calculate_calorie_target(tdee, profile["goal"])
+            target_protein, _ = calculate_protein_target(profile["weight_kg"], profile["goal"])
+            behavior = BehaviorRepository().get_summary(
+                user_id,
+                target_calories=target_calories,
+                target_protein=target_protein
+            )
+            
+        return CoachResponse(
+            summary=llm_resp.summary,
+            current_status=llm_resp.current_status,
+            recommendations=llm_resp.recommendations,
+            action_plan=llm_resp.action_plan,
+            metrics=metrics,
+            progress=progress,
+            behavior=behavior,
+            citations=valid_citations,
+            tool_calls=tool_call_records,
+            generation_error=False,
+            error_code=None,
+            profile_used=profile_used,
+            total_duration_ms=int((time.time() - start_time) * 1000)
+        )
+
+    def ask(self, request: AgentRequest | CoachRequest, user_id: int) -> AgentResponse | CoachResponse:
+        start_time = time.time()
+        profile = self._profile_repo.get_profile(user_id)
+        profile_used = profile is not None
+        system_prompt = self._build_system_prompt(profile, user_id)
+        
+        if profile_used:
+            logger.info("Profile loaded for agent request.")
+        
+        if request.query:
+            contents = [types.Content(role="user", parts=[types.Part.from_text(text=request.query)])]
+        else:
+            contents = [types.Content(role="user", parts=[types.Part.from_text(text="Generate my coaching summary.")])]
+            
+        loop_result = self._execute_tool_loop(contents, system_prompt, user_id, profile, start_time)
+        if isinstance(loop_result, (AgentResponse, CoachResponse)):
+            return loop_result  # Error response from loop
+            
+        raw_text, tool_call_records, retrieved_knowledge = loop_result
+        
+        if self.mode == "chat":
+            return self._handle_chat_response(raw_text, tool_call_records, retrieved_knowledge, profile_used, start_time)
+        else:
+            return self._handle_coach_response(raw_text, tool_call_records, retrieved_knowledge, profile, user_id, profile_used, start_time)
 
     def _error_response(self, error_code: str, generation_error: bool, profile_used: bool = False, total_duration_ms: Optional[int] = None) -> AgentResponse | CoachResponse:
         if self.mode == "chat":
@@ -418,6 +416,7 @@ class AgentOrchestrator:
                 summary="An error occurred while generating your coaching summary.",
                 current_status="Error",
                 recommendations=[],
+                action_plan=[],
                 metrics={},
                 progress={},
                 behavior={},

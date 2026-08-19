@@ -43,12 +43,14 @@ class CoachLLMResponse(BaseModel):
     summary: str
     current_status: str
     recommendations: List[CoachingRecommendation]
+    action_plan: List[str] = Field(..., min_length=3, max_length=3, description="Exactly 3 actionable, specific daily tasks based on the user's goal and adherence")
     insufficient_context: bool
 
 class CoachResponse(BaseModel):
     summary: str
     current_status: str
     recommendations: List[CoachingRecommendation]
+    action_plan: List[str] = Field(default_factory=list, description="Exactly 3 actionable, specific daily tasks")
     metrics: dict = Field(default_factory=dict, description="Deterministic metrics pre-calculated for the user")
     progress: dict = Field(default_factory=dict, description="Deterministic progress summary")
     behavior: dict = Field(default_factory=dict, description="Deterministic behavioral summary")

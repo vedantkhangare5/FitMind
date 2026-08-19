@@ -98,6 +98,7 @@ export const api = {
 
   // Progress
   getProgress: () => fetchApi<any>('/api/progress'),
+  getProgressSummary: () => fetchApi<any>('/api/progress/summary'),
   addProgress: (data: any) => fetchApi<any>('/api/progress', {
     method: 'POST',
     body: JSON.stringify(data),

@@ -92,7 +92,7 @@ def test_hypothetical_regression(test_profile, tmp_path):
         
         mock_response_coach = MagicMock()
         mock_response_coach.function_calls = []
-        mock_response_coach.text = '{"summary": "Keep going.", "current_status": "Losing fat", "recommendations": [], "insufficient_context": false}'
+        mock_response_coach.text = '{"summary": "Keep going.", "current_status": "Losing fat", "recommendations": [], "action_plan": ["Action 1", "Action 2", "Action 3"], "insufficient_context": false}'
         
         mock_client_coach.models.generate_content.return_value = mock_response_coach
         coach_orchestrator.client = mock_client_coach
@@ -133,7 +133,7 @@ def test_coaching_citation_validation(test_profile, tmp_path):
         
         mock_response = MagicMock()
         mock_response.function_calls = []
-        mock_response.text = '{"summary": "Sum", "current_status": "Stat", "recommendations": [{"title": "Rec", "description": "Desc", "priority": "high", "evidence_ids": ["doc-fake-123"]}], "insufficient_context": false}'
+        mock_response.text = '{"summary": "Sum", "current_status": "Stat", "recommendations": [{"title": "Rec", "description": "Desc", "priority": "high", "evidence_ids": ["doc-fake-123"]}], "action_plan": ["A1", "A2", "A3"], "insufficient_context": false}'
         
         mock_client.models.generate_content.return_value = mock_response
         orchestrator.client = mock_client
