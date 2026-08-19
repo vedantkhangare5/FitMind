@@ -1,4 +1,4 @@
-# FitMind AI (v1.0.0)
+# FitMind AI - Intelligent Personal Fitness Assistant (v1.0.0)
 
 An evidence-based fitness and nutrition intelligence agent, designed to provide personalized, grounded coaching with a focus on reliability, safety, and deterministic calculation.
 
