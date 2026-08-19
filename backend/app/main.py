@@ -29,8 +29,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.database import init_db
+from app.database import init_db, get_connection
 from app.routers import fitness, rag, agent, profile, progress, coach, behavior, auth
+
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi.responses import JSONResponse
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +58,26 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    logger.error(f"Unhandled exception: {exc}\n{traceback.format_exc()}")
+    if settings.APP_ENV == "production":
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"}
+        )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "trace": traceback.format_exc()}
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -65,8 +85,17 @@ app.add_middleware(
 
 @app.get("/api/health")
 def health_check():
+    db_status = "healthy"
+    try:
+        conn = get_connection()
+        conn.execute("SELECT 1")
+        conn.close()
+    except Exception as e:
+        db_status = f"unhealthy: {e}"
+        
     return {
-        "status": "healthy",
+        "status": "healthy" if db_status == "healthy" else "degraded",
+        "database": db_status,
         "app_name": settings.APP_NAME,
         "environment": settings.APP_ENV,
         "timestamp": datetime.now(timezone.utc).isoformat(),

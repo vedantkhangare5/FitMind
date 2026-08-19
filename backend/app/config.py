@@ -36,6 +36,17 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "local-insecure-secret" # In prod, override via .env
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # Production security
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    LOG_LEVEL: str = "INFO"
+
+    def model_post_init(self, __context):
+        if self.APP_ENV == "production" and self.JWT_SECRET == "local-insecure-secret":
+            raise ValueError("JWT_SECRET must be set in production")
 
     # Tell pydantic-settings to read from .env and .env.local (local overrides)
     # Files listed later take higher priority, so .env.local overrides .env

@@ -16,6 +16,10 @@ dependencies = [
     "bcrypt>=4.0.0",
     "python-multipart>=0.0.6",
     "email-validator>=2.3.0",
+    "alembic>=1.19.1",
+    "sqlalchemy>=2.0.52",
+    "gunicorn>=26.1.0",
+    "slowapi>=0.1.10",
 ]
 
 # Development dependencies - tools for testing and code quality
