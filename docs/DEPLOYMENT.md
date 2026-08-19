@@ -1,4 +1,4 @@
-# FitMind Production Deployment Guide
+# FitMind Production Deployment Guide (v1.0.0)
 
 This document outlines the standard operating procedure for deploying FitMind to a production environment.
 
